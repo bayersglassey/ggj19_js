@@ -13,6 +13,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 */
 
+'use strict';
+
 var delay = 30;
 var canvas = document.getElementById('canvas');
 
@@ -35,7 +37,7 @@ var mousey;
 var tick = 0;
 
 function update(obj1, obj2){
-    for(key in obj2){
+    for(var key in obj2){
         obj1[key] = obj2[key];
     }
 }
@@ -76,6 +78,7 @@ function Entity(options){
     this.radius = 10;
     this.gravity = 0;
     this.color = 'green';
+    this.fillcolor = 'lightgreen';
     this.trail_color = 'cyan';
 
     /* Caller can override default attributes */
@@ -160,8 +163,10 @@ update(Entity.prototype, {
 
         /* Render a ...fly */
         ctx.strokeStyle = this.color;
+        ctx.fillStyle = this.fillcolor;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.fill();
         ctx.stroke();
     },
     distance: function(other){
@@ -264,16 +269,26 @@ update(Fly.prototype, {
 function Droplet(options){
     /* Javascript class inheritance?? */
     options = options || {};
-    options.max_age = 200;
     options.damp = .985;
     options.gravity = .3;
-    options.radius = 10;
     options.color = 'blue';
+    options.fillcolor = 'lightblue';
     options.trail_color = 'lightgrey';
     options.max_n_trails = 5;
     options.x = Math.random() * canvas.width;
     options.y = 0;
     Entity.call(this, options);
+
+    /* Radius starts at start_radius, grows by add_radius_normal pixels
+    per frame, once it hits pop_after_radius it grows by add_radius_popping
+    pixels per frame, once it hits die_after_radius the droplet "dies" (is
+    removed from game) */
+    this.start_radius = 10;
+    this.radius = this.start_radius;
+    this.add_radius_normal = .02;
+    this.add_radius_popping = 3;
+    this.pop_after_radius = 20;
+    this.die_after_radius = 50;
 }
 update(Droplet.prototype, Entity.prototype);
 update(Droplet.prototype, {
@@ -293,17 +308,29 @@ update(Droplet.prototype, {
                 t);
         }
 
-        if(this.age > this.max_age){
+        if(this.radius >= this.pop_after_radius){
             /* Old droplets "pop" by quickly expanding, then disappearing */
-            this.radius += 2;
-            if(this.radius > 30){
+            this.radius += this.add_radius_popping;
+            if(this.radius > this.die_after_radius){
                 this.die();
             }
         }else{
             /* Droplets slowly expand to give you an idea of their age */
-            this.radius += .05;
+            this.radius += this.add_radius_normal;
         }
     },
+});
+
+
+
+function Flower(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    Entity.call(this, options);
+}
+update(Flower.prototype, Entity.prototype);
+update(Flower.prototype, {
+    type: 'flower',
 });
 
 
