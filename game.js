@@ -40,11 +40,29 @@ function update(obj1, obj2){
 }
 
 
+function interpolate(x0, x1, t){
+    return x0 + x1 * t;
+}
+
+function interpolate_rgb(r0, g0, b0, r1, g1, b1, t){
+    var r = parseInt(interpolate(r0, r1, t));
+    var g = parseInt(interpolate(g0, g1, t));
+    var b = parseInt(interpolate(b0, b1, t));
+
+    /* Make a CSS rgb color value */
+    return ['rgb(', r, ', ', g, ', ', b, ')'].join('');
+}
+
+
+
 var entities = [];
 function Entity(options){
     this.trails = [];
     this.trail_ratio = .4; /* So like... if 1, trail will be unbroken. If 0, trail will be dots. */
     this.max_n_trails = 20;
+
+    this.dead = false;
+    this.age = 0;
 
     this.x = canvas.width / 2;
     this.y = canvas.height / 2;
@@ -67,6 +85,13 @@ function Entity(options){
 }
 update(Entity.prototype, {
     type: 'entity',
+    die: function(){
+        /* We're not going to mess with the entities array here,
+        since that would mess up code which was looping over it...
+        So we just mark ourselves as dead, and rely on other code
+        to periodically remove dead entities from the array */
+        this.dead = true;
+    },
     do_key_stuff: function(){
         if(kdown[KUP]||kdown[KW])this.vy-=this.accel;
         if(kdown[KDOWN]||kdown[KS])this.vy+=this.accel;
@@ -74,6 +99,8 @@ update(Entity.prototype, {
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
     },
     step: function(){
+        this.age++;
+
         if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
         if(this.trails.length > this.max_n_trails)this.trails.shift();
 
@@ -199,7 +226,10 @@ update(Fly.prototype, {
 function Droplet(options){
     /* Javascript class inheritance?? */
     options = options || {};
-    options.gravity = .5;
+    options.max_age = 200;
+    options.damp = .985;
+    options.gravity = .3;
+    options.radius = 10;
     options.color = 'blue';
     options.trail_color = 'lightgrey';
     options.max_n_trails = 5;
@@ -210,16 +240,34 @@ function Droplet(options){
 update(Droplet.prototype, Entity.prototype);
 update(Droplet.prototype, {
     type: 'droplet',
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        var FADE_TO_WHITE = false;
+        if(FADE_TO_WHITE){
+            /* Droplots start off blue, fade to white...
+            There's probably a way to do this via transparency instead of
+            fading to white, though... idunno */
+            var t = Math.min(this.age / this.max_age, 1);
+            this.color = interpolate_rgb(
+                0, 0, 255, /* blue */
+                255, 255, 255, /* white */
+                t);
+        }
+
+        /* Old droplets "pop" by expanding, then disappearing */
+        if(this.age > this.max_age){
+            this.radius += 2;
+            if(this.radius > 25){
+                this.die();
+            }
+        }
+    },
 });
 
 
 
 var fly = new Fly();
-
-var n_droplets = 10;
-for(var i = 0; i < n_droplets; i++){
-    new Droplet();
-}
 
 function init(){
     $(document).on('keydown', keydown);
@@ -230,11 +278,29 @@ function init(){
 
 function step(){
     tick++;
+
     fly.do_key_stuff();
+
+    if(tick % 25 === 0)new Droplet();
+
+    /* Let entities do whatever it is they do each frame */
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
         entity.step();
     }
+
+    /* Remove "dead" entities */
+    for(var i = 0; i < entities.length;){
+        var entity = entities[i];
+        if(entity.dead){
+            /* Splice entity out of the array */
+            entities.splice(i, 1);
+        }else{
+            i++;
+        }
+    }
+
+    /* Render the world */
     render();
 }
 
