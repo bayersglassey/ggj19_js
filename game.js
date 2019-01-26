@@ -30,6 +30,13 @@ var kdown = {};
 
 var tick = 0;
 
+function update(obj1, obj2){
+    for(key in obj2){
+        obj1[key] = obj2[key];
+    }
+}
+
+
 var entities = [];
 function Entity(options){
     this.trails = [];
@@ -45,17 +52,17 @@ function Entity(options){
     this.damp = .95;
     this.bounce = .5;
     this.radius = 10;
+    this.gravity = 0;
     this.color = 'green';
+    this.trail_color = 'cyan';
 
     /* Caller can override default attributes */
-    for(key in options){
-        this[key] = options[key];
-    }
+    update(this, options);
 
     /* Push onto global array of entities */
     entities.push(this);
 }
-Entity.prototype = {
+update(Entity.prototype, {
     step: function(){
         if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
         if(this.trails.length > this.max_n_trails)this.trails.shift();
@@ -65,8 +72,11 @@ Entity.prototype = {
         if(kdown[KLEFT]||kdown[KA])this.vx-=this.accel;
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
 
+        this.vy += this.gravity;
+
         this.x += this.vx;
         this.y += this.vy;
+
         if(this.x < 0){
             this.x = 0;
             this.vx *= -this.bounce;
@@ -88,10 +98,6 @@ Entity.prototype = {
     render: function(){
         var ctx = canvas.getContext('2d');
 
-        /* Clear screen */
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         /* Render trails */
         for(var i = 0; i < this.trails.length - 1; i++){
             var trail = this.trails[i];
@@ -100,7 +106,7 @@ Entity.prototype = {
             var addx = (next_trail.x - trail.x) * mul;
             var addy = (next_trail.y - trail.y) * mul;
 
-            ctx.strokeStyle = 'cyan';
+            ctx.strokeStyle = this.trail_color;
             ctx.beginPath();
             ctx.moveTo(trail.x, trail.y);
             ctx.lineTo(trail.x + addx, trail.y + addy);
@@ -108,14 +114,40 @@ Entity.prototype = {
         }
 
         /* Render a ...fly */
-        ctx.strokeStyle = 'green';
+        ctx.strokeStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
         ctx.stroke();
     },
-}
+});
 
-var fly = new Entity();
+
+function Fly(options){
+    /* Javascript class inheritance?? */
+    Entity.call(this, options);
+}
+update(Fly.prototype, Entity.prototype);
+
+
+function Droplet(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    options.gravity = .5;
+    options.color = 'blue';
+    options.x = Math.random() * canvas.width;
+    options.y = 0;
+    Entity.call(this, options);
+}
+update(Droplet.prototype, Entity.prototype);
+
+
+
+var fly = new Fly();
+
+var n_droplets = 10;
+for(var i = 0; i < n_droplets; i++){
+    new Droplet();
+}
 
 function init(){
     $(document).on('keydown', keydown);
@@ -134,6 +166,12 @@ function step(){
 }
 
 function render(){
+    var ctx = canvas.getContext('2d');
+
+    /* Clear screen */
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
         entity.render();
