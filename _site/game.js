@@ -13,10 +13,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 */
 
+'use strict';
+
 var delay = 30;
 var canvas = document.getElementById('canvas');
-canvas.width = $(window).width() - 50;
-canvas.height = $(window).height() - 50;
 
 init();
 
@@ -30,14 +30,32 @@ var KS = 83;
 var KD = 68;
 var KSPACE = 32;
 var kdown = {};
+var mdown = false;
+var mousex;
+var mousey;
 
 var tick = 0;
 
 function update(obj1, obj2){
-    for(key in obj2){
+    for(var key in obj2){
         obj1[key] = obj2[key];
     }
 }
+
+
+function interpolate(x0, x1, t){
+    return x0 + x1 * t;
+}
+
+function interpolate_rgb(r0, g0, b0, r1, g1, b1, t){
+    var r = parseInt(interpolate(r0, r1, t));
+    var g = parseInt(interpolate(g0, g1, t));
+    var b = parseInt(interpolate(b0, b1, t));
+
+    /* Make a CSS rgb color value */
+    return ['rgb(', r, ', ', g, ', ', b, ')'].join('');
+}
+
 
 
 var entities = [];
@@ -45,6 +63,9 @@ function Entity(options){
     this.trails = [];
     this.trail_ratio = .4; /* So like... if 1, trail will be unbroken. If 0, trail will be dots. */
     this.max_n_trails = 20;
+
+    this.dead = false;
+    this.age = 0;
 
     this.x = canvas.width / 2;
     this.y = canvas.height / 2;
@@ -57,6 +78,7 @@ function Entity(options){
     this.radius = 10;
     this.gravity = 0;
     this.color = 'green';
+    this.fillcolor = 'lightgreen';
     this.trail_color = 'cyan';
 
     /* Caller can override default attributes */
@@ -67,13 +89,30 @@ function Entity(options){
 }
 update(Entity.prototype, {
     type: 'entity',
+    die: function(){
+        /* We're not going to mess with the entities array here,
+        since that would mess up code which was looping over it...
+        So we just mark ourselves as dead, and rely on other code
+        to periodically remove dead entities from the array */
+        this.dead = true;
+    },
     do_key_stuff: function(){
         if(kdown[KUP]||kdown[KW])this.vy-=this.accel;
         if(kdown[KDOWN]||kdown[KS])this.vy+=this.accel;
         if(kdown[KLEFT]||kdown[KA])this.vx-=this.accel;
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
+
+        if(mdown){
+          var distx = this.x - mousex;
+          var disty = this.y - mousey;
+          var dist = Math.sqrt(distx * distx + disty * disty);
+          this.vx-=this.accel * distx / dist;
+          this.vy-=this.accel * disty / dist;
+        };
     },
     step: function(){
+        this.age++;
+
         if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
         if(this.trails.length > this.max_n_trails)this.trails.shift();
 
@@ -89,6 +128,10 @@ update(Entity.prototype, {
             this.x = canvas.width - 1;
             this.vx *= -this.bounce;
         }
+
+        /* You're considered on the ground if you're within 10 pixels of it */
+        this.on_ground = this.y >= canvas.height - 10;
+
         if(this.y < 0){
             this.y = 0;
             this.vy *= -this.bounce;
@@ -120,8 +163,10 @@ update(Entity.prototype, {
 
         /* Render a ...fly */
         ctx.strokeStyle = this.color;
+        ctx.fillStyle = this.fillcolor;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.fill();
         ctx.stroke();
     },
     distance: function(other){
@@ -147,7 +192,15 @@ update(Entity.prototype, {
 
 function Fly(options){
     /* Javascript class inheritance?? */
+    options = options || {};
+    options.accel = .85;
     Entity.call(this, options);
+
+    this.min_stamina = 15; /* Go below this, and you can no longer fly!.. */
+    this.max_stamina = 100;
+    this.stamina = this.max_stamina;
+
+    this.orientation = 0; //0 to 2*Math.PI to rotate image!
 
     this.grab_springiness = .001;
     this.grab_cooldown = 0;
@@ -167,7 +220,30 @@ update(Fly.prototype, {
         }
     },
     step: function(){
+
+        //rotates w motion
+        this.orientation = Math.atan(this.vx/this.vy);
+
+        if(this.stamina < this.min_stamina){
+            /* Not enough stamina to fly! */
+            this.gravity = .75;
+        }else{
+            /* Always a tiny bit of gravity, otherwise when you're
+            trying to rest on the ground you can accidentally rise off it */
+            this.gravity = .05;
+        }
+
         Entity.prototype.step.call(this);
+
+        if(this.on_ground){
+            /* While "resting" on the ground, you regain stamina slowly */
+            this.stamina += 2;
+            if(this.stamina > this.max_stamina)this.stamina = this.max_stamina;
+        }else{
+            /* While flying, you lose stamina */
+            this.stamina -= .5;
+            if(this.stamina < 0)this.stamina = 0;
+        }
 
         if(this.grab_cooldown > 0){
             this.grab_cooldown--;
@@ -199,42 +275,118 @@ update(Fly.prototype, {
 function Droplet(options){
     /* Javascript class inheritance?? */
     options = options || {};
-    options.gravity = .5;
+    options.damp = .985;
+    options.gravity = .3;
     options.color = 'blue';
+    options.fillcolor = 'lightblue';
     options.trail_color = 'lightgrey';
     options.max_n_trails = 5;
     options.x = Math.random() * canvas.width;
     options.y = 0;
     Entity.call(this, options);
+
+    /* Radius starts at start_radius, grows by add_radius_normal pixels
+    per frame, once it hits pop_after_radius it grows by add_radius_popping
+    pixels per frame, once it hits die_after_radius the droplet "dies" (is
+    removed from game) */
+    this.start_radius = 10;
+    this.radius = this.start_radius;
+    this.add_radius_normal = .02;
+    this.add_radius_popping = 3;
+    this.pop_after_radius = 20;
+    this.die_after_radius = 50;
 }
 update(Droplet.prototype, Entity.prototype);
 update(Droplet.prototype, {
     type: 'droplet',
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        var FADE_TO_WHITE = false;
+        if(FADE_TO_WHITE){
+            /* Droplots start off blue, fade to white...
+            There's probably a way to do this via transparency instead of
+            fading to white, though... idunno */
+            var t = Math.min(this.age / this.max_age, 1);
+            this.color = interpolate_rgb(
+                0, 0, 255, /* blue */
+                255, 255, 255, /* white */
+                t);
+        }
+
+        if(this.radius >= this.pop_after_radius){
+            /* Old droplets "pop" by quickly expanding, then disappearing */
+            this.radius += this.add_radius_popping;
+            if(this.radius > this.die_after_radius){
+                this.die();
+            }
+        }else{
+            /* Droplets slowly expand to give you an idea of their age */
+            this.radius += this.add_radius_normal;
+        }
+    },
+});
+
+
+
+function Flower(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    Entity.call(this, options);
+}
+update(Flower.prototype, Entity.prototype);
+update(Flower.prototype, {
+    type: 'flower',
 });
 
 
 
 var fly = new Fly();
 
-var n_droplets = 10;
-for(var i = 0; i < n_droplets; i++){
-    new Droplet();
-}
-
 function init(){
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
-    $(document).on('click', click);
+    //$(document).on('click', click);
+    $(document).on('mousedown',mousedown);
+    $(document).on('mouseup',mouseup);
+    $(document).on('mousemove',mousemove);
+    //$(document).on('mousemove',);
+
+    // var intervalId;
+    // $(document).on('mousedown', function(event) {
+    //   intervalId = setInterval(click(event), 100);
+    // }).mouseup(function() {
+    //   clearInterval(intervalId);
+    //   //console.log('up');
+    // });
     setInterval(step, delay);
 }
 
 function step(){
     tick++;
+
     fly.do_key_stuff();
+
+    if(tick % 25 === 0)new Droplet();
+
+    /* Let entities do whatever it is they do each frame */
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
         entity.step();
     }
+
+    /* Remove "dead" entities */
+    for(var i = 0; i < entities.length;){
+        var entity = entities[i];
+        if(entity.dead){
+            /* Splice entity out of the array */
+            entities.splice(i, 1);
+        }else{
+            i++;
+        }
+    }
+
+    /* Render the world */
     render();
 }
 
@@ -245,10 +397,24 @@ function render(){
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    /* Render entities */
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
         entity.render();
     }
+
+    /* Render stamina bar */
+    var bar = {
+        x: 10,
+        y: 10,
+        w: 200,
+        h: 25,
+    };
+    var ratio = fly.stamina / fly.max_stamina;
+    ctx.strokeStyle = 'black';
+    ctx.strokeRect(bar.x, bar.y, bar.w, bar.h); /* unfilled rectangle */
+    ctx.fillStyle = 'red';
+    ctx.fillRect(bar.x, bar.y, bar.w * ratio, bar.h); /* filled rectangle */
 }
 
 function keydown(event){
@@ -260,13 +426,15 @@ function keyup(event){
     kdown[event.keyCode] = false;
 }
 
-function click(event){
-    //console.log(event);
-    var target_x = event.offsetX;
-    var target_y = event.offsetY;
-    var mul = .1;
-    var addx = (target_x - fly.x) * mul;
-    var addy = (target_y - fly.y) * mul;
-    fly.vx += addx;
-    fly.vy += addy;
+function mousedown(event){
+    mdown = true;
+}
+
+function mouseup(event){
+    mdown = false;
+}
+
+function mousemove(event){
+    mousex = event.pageX;
+    mousey = event.pageY;
 }

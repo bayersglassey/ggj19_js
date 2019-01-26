@@ -31,6 +31,9 @@ var KS = 83;
 var KD = 68;
 var KSPACE = 32;
 var kdown = {};
+var mdown = false;
+var mousex;
+var mousey;
 
 var tick = 0;
 
@@ -104,6 +107,14 @@ update(Entity.prototype, {
         if(kdown[KDOWN]||kdown[KS])this.vy+=this.accel;
         if(kdown[KLEFT]||kdown[KA])this.vx-=this.accel;
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
+
+        if(mdown){
+          var distx = this.x - mousex;
+          var disty = this.y - mousey;
+          var dist = Math.sqrt(distx * distx + disty * disty);
+          this.vx-=this.accel * distx / dist;
+          this.vy-=this.accel * disty / dist;
+        };
     },
     step: function(){
         this.age++;
@@ -211,6 +222,8 @@ function Fly(options){
     this.max_stamina = 100;
     this.stamina = this.max_stamina;
 
+    this.orientation = 0; //0 to 2*Math.PI to rotate image!
+
     this.grab_springiness = .001;
     this.grab_cooldown = 0;
     this.grabbed_things = [];
@@ -229,6 +242,10 @@ update(Fly.prototype, {
         }
     },
     step: function(){
+
+        //rotates w motion
+        this.orientation = Math.atan(this.vx/this.vy);
+
         if(this.stamina < this.min_stamina){
             /* Not enough stamina to fly! */
             this.gravity = .75;
@@ -351,7 +368,19 @@ var fly = new Fly();
 function init(){
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
-    $(document).on('click', click);
+    //$(document).on('click', click);
+    $(document).on('mousedown',mousedown);
+    $(document).on('mouseup',mouseup);
+    $(document).on('mousemove',mousemove);
+    //$(document).on('mousemove',);
+
+    // var intervalId;
+    // $(document).on('mousedown', function(event) {
+    //   intervalId = setInterval(click(event), 100);
+    // }).mouseup(function() {
+    //   clearInterval(intervalId);
+    //   //console.log('up');
+    // });
     setInterval(step, delay);
 }
 
@@ -421,13 +450,15 @@ function keyup(event){
     kdown[event.keyCode] = false;
 }
 
-function click(event){
-    //console.log(event);
-    var target_x = event.offsetX;
-    var target_y = event.offsetY;
-    var mul = .1;
-    var addx = (target_x - fly.x) * mul;
-    var addy = (target_y - fly.y) * mul;
-    fly.vx += addx;
-    fly.vy += addy;
+function mousedown(event){
+    mdown = true;
+}
+
+function mouseup(event){
+    mdown = false;
+}
+
+function mousemove(event){
+    mousex = event.pageX;
+    mousey = event.pageY;
 }
