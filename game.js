@@ -50,6 +50,30 @@ function update(obj1, obj2){
 }
 
 
+function get_orientation(x, y){
+    /*
+        Math.atan values (they're in radians):
+            0       ->  0
+            1       ->  0.785 == PI/4 == 45 degrees
+            9999999 ->  1.571 == PI/2 == 90 degrees
+
+        Math.atan(-x) == -Math.atan(x)
+
+        So Math.atan(x) is between -90 degrees to +90 degrees
+    */
+    var rot = y === 0? 0: Math.atan(-y/x);
+    if(x < 0)rot += Math.PI;
+    return rot;
+}
+
+function to_degrees(radians){
+    return radians / (Math.PI / 180);
+}
+
+function to_radians(degrees){
+    return degrees * Math.PI / 180;
+}
+
 function interpolate(x0, x1, t){
     return x0 + x1 * t;
 }
@@ -226,8 +250,7 @@ update(Entity.prototype, {
                 var dx = this.x;
                 var dy = this.y;
                 var scale = w / image.width;
-                var rot = this.orientation / (Math.PI/180);
-                //console.log("rot", this.orientation, rot);
+                var rot = to_degrees(this.orientation);
                 drawImage(ctx, image, dx, dy, scale, rot);
             }
         }
@@ -289,7 +312,7 @@ update(Fly.prototype, {
 
         if(this.vx){
             //rotates w motion
-            this.orientation = Math.atan(this.vy/this.vx);
+            this.orientation = get_orientation(this.vx, this.vy);
         }
 
         if(this.stamina < this.min_stamina){
