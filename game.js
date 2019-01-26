@@ -369,7 +369,9 @@ function render(){
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     /* Render entities */
-    for(var i = 0; i < entities.length; i++){
+    /* NOTE: We render them last to first, so you can see the fly on
+    top of the droplets */
+    for(var i = entities.length - 1; i >= 0; i--){
         var entity = entities[i];
         entity.render();
     }
