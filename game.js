@@ -75,6 +75,7 @@ function Entity(options){
     this.radius = 10;
     this.gravity = 0;
     this.color = 'green';
+    this.fillcolor = 'lightgreen';
     this.trail_color = 'cyan';
 
     /* Caller can override default attributes */
@@ -151,8 +152,10 @@ update(Entity.prototype, {
 
         /* Render a ...fly */
         ctx.strokeStyle = this.color;
+        ctx.fillStyle = this.fillcolor;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.fill();
         ctx.stroke();
     },
     distance: function(other){
@@ -258,6 +261,7 @@ function Droplet(options){
     options.damp = .985;
     options.gravity = .3;
     options.color = 'blue';
+    options.fillcolor = 'lightblue';
     options.trail_color = 'lightgrey';
     options.max_n_trails = 5;
     options.x = Math.random() * canvas.width;
@@ -304,6 +308,18 @@ update(Droplet.prototype, {
             this.radius += this.add_radius_normal;
         }
     },
+});
+
+
+
+function Flower(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    Entity.call(this, options);
+}
+update(Flower.prototype, Entity.prototype);
+update(Flower.prototype, {
+    type: 'flower',
 });
 
 
