@@ -253,16 +253,25 @@ update(Fly.prototype, {
 function Droplet(options){
     /* Javascript class inheritance?? */
     options = options || {};
-    options.max_age = 200;
     options.damp = .985;
     options.gravity = .3;
-    options.radius = 10;
     options.color = 'blue';
     options.trail_color = 'lightgrey';
     options.max_n_trails = 5;
     options.x = Math.random() * canvas.width;
     options.y = 0;
     Entity.call(this, options);
+
+    /* Radius starts at start_radius, grows by add_radius_normal pixels
+    per frame, once it hits pop_after_radius it grows by add_radius_popping
+    pixels per frame, once it hits die_after_radius the droplet "dies" (is
+    removed from game) */
+    this.start_radius = 10;
+    this.radius = this.start_radius;
+    this.add_radius_normal = .02;
+    this.add_radius_popping = 3;
+    this.pop_after_radius = 20;
+    this.die_after_radius = 50;
 }
 update(Droplet.prototype, Entity.prototype);
 update(Droplet.prototype, {
@@ -282,15 +291,15 @@ update(Droplet.prototype, {
                 t);
         }
 
-        if(this.age > this.max_age){
+        if(this.radius >= this.pop_after_radius){
             /* Old droplets "pop" by quickly expanding, then disappearing */
-            this.radius += 2;
-            if(this.radius > 30){
+            this.radius += this.add_radius_popping;
+            if(this.radius > this.die_after_radius){
                 this.die();
             }
         }else{
             /* Droplets slowly expand to give you an idea of their age */
-            this.radius += .05;
+            this.radius += this.add_radius_normal;
         }
     },
 });
