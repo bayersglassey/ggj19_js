@@ -18,6 +18,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 var delay = 30;
 var canvas = document.getElementById('canvas');
 
+var ground_height = 50;
+
 init();
 
 var KUP = 38;
@@ -130,7 +132,7 @@ update(Entity.prototype, {
         }
 
         /* You're considered on the ground if you're within 10 pixels of it */
-        this.on_ground = this.y >= canvas.height - 10;
+        this.on_ground = this.y >= canvas.height - ground_height - 10;
 
         if(this.y < 0){
             this.y = 0;
@@ -188,7 +190,6 @@ update(Entity.prototype, {
         return collided_entities;
     },
 });
-
 
 function Fly(options){
     /* Javascript class inheritance?? */
@@ -338,8 +339,6 @@ update(Flower.prototype, Entity.prototype);
 update(Flower.prototype, {
     type: 'flower',
 });
-
-
 
 var fly = new Fly();
 
