@@ -8,6 +8,10 @@ var KUP = 38;
 var KDOWN = 40;
 var KLEFT = 37;
 var KRIGHT = 39;
+var KW = 87;
+var KA = 65;
+var KS = 83;
+var KD = 68;
 var kdown = {};
 
 var tick = 0;
@@ -37,10 +41,10 @@ function step(){
     if(tick % 3 === 0)trails.push({x:x, y:y});
     if(trails.length > max_n_trails)trails.shift();
 
-    if(kdown[KUP])vy-=accel;
-    if(kdown[KDOWN])vy+=accel;
-    if(kdown[KLEFT])vx-=accel;
-    if(kdown[KRIGHT])vx+=accel;
+    if(kdown[KUP]|kdown[KW])vy-=accel;
+    if(kdown[KDOWN]|kdown[KS])vy+=accel;
+    if(kdown[KLEFT]|kdown[KA])vx-=accel;
+    if(kdown[KRIGHT]|kdown[KD])vx+=accel;
 
     x += vx;
     y += vy;
@@ -95,7 +99,7 @@ function render(){
 }
 
 function keydown(event){
-    //console.log("KEY DOWN", event.keyCode);
+    console.log("KEY DOWN", event.keyCode);
     kdown[event.keyCode] = true;
 }
 
@@ -113,5 +117,3 @@ function click(event){
     vx += addx;
     vy += addy;
 }
-
-
