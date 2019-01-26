@@ -15,8 +15,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var canvas = document.getElementById('canvas');
-canvas.width = $(window).width() - 50;
-canvas.height = $(window).height() - 50;
 
 init();
 
