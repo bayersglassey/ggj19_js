@@ -26,6 +26,7 @@ var KW = 87;
 var KA = 65;
 var KS = 83;
 var KD = 68;
+var KSPACE = 32;
 var kdown = {};
 
 var tick = 0;
@@ -63,14 +64,16 @@ function Entity(options){
     entities.push(this);
 }
 update(Entity.prototype, {
-    step: function(){
-        if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
-        if(this.trails.length > this.max_n_trails)this.trails.shift();
-
+    type: 'entity',
+    do_key_stuff: function(){
         if(kdown[KUP]||kdown[KW])this.vy-=this.accel;
         if(kdown[KDOWN]||kdown[KS])this.vy+=this.accel;
         if(kdown[KLEFT]||kdown[KA])this.vx-=this.accel;
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
+    },
+    step: function(){
+        if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
+        if(this.trails.length > this.max_n_trails)this.trails.shift();
 
         this.vy += this.gravity;
 
@@ -119,14 +122,76 @@ update(Entity.prototype, {
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
         ctx.stroke();
     },
+    distance: function(other){
+        /* The classic Pythagoreas! */
+        return Math.sqrt(
+            Math.pow(this.x - other.x, 2) +
+            Math.pow(this.y - other.y, 2));
+    },
+    collide: function(other){
+        return this.distance(other) < this.radius + other.radius;
+    },
+    get_collided_entites: function(){
+        var collided_entities = [];
+        for(var i = 0; i < entities.length; i++){
+            var other = entities[i];
+            if(this === other)continue;
+            if(this.collide(other))collided_entities.push(other);
+        }
+        return collided_entities;
+    },
 });
 
 
 function Fly(options){
     /* Javascript class inheritance?? */
     Entity.call(this, options);
+
+    this.grab_springiness = .001;
+    this.grab_cooldown = 0;
+    this.grabbed_things = [];
 }
 update(Fly.prototype, Entity.prototype);
+update(Fly.prototype, {
+    type: 'fly',
+    do_key_stuff: function(){
+        Entity.prototype.do_key_stuff.call(this);
+        if(kdown[KSPACE]){
+            /* Drop everything we had picked up */
+            this.grabbed_things = [];
+
+            /* Wait 5 frames before picking stuff up again */
+            this.grab_cooldown = 5;
+        }
+    },
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        if(this.grab_cooldown > 0){
+            this.grab_cooldown--;
+        }else{
+            /* Pick up any droplets we touch */
+            var collided_entities = this.get_collided_entites();
+            for(var i = 0; i < collided_entities.length; i++){
+                var other = collided_entities[i];
+                if(other.type !== 'droplet')continue;
+                if(this.grabbed_things.indexOf(other) >= 0)continue;
+                this.grabbed_things.push(other);
+            }
+        }
+
+        /* Swing stuff around which we've picked up */
+        for(var i = 0; i < this.grabbed_things.length; i++){
+            var other = this.grabbed_things[i];
+            var distance = this.distance(other);
+            var mul = distance * this.grab_springiness;
+            var addx = (this.x - other.x) * mul;
+            var addy = (this.y - other.y) * mul;
+            other.vx += addx;
+            other.vy += addy;
+        }
+    },
+});
 
 
 function Droplet(options){
@@ -134,11 +199,16 @@ function Droplet(options){
     options = options || {};
     options.gravity = .5;
     options.color = 'blue';
+    options.trail_color = 'lightgrey';
+    options.max_n_trails = 5;
     options.x = Math.random() * canvas.width;
     options.y = 0;
     Entity.call(this, options);
 }
 update(Droplet.prototype, Entity.prototype);
+update(Droplet.prototype, {
+    type: 'droplet',
+});
 
 
 
@@ -158,6 +228,7 @@ function init(){
 
 function step(){
     tick++;
+    fly.do_key_stuff();
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
         entity.step();
