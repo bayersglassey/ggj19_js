@@ -132,7 +132,7 @@ update(Entity.prototype, {
         }
 
         /* You're considered on the ground if you're within 10 pixels of it */
-        this.on_ground = this.y >= canvas.height - 10;
+        this.on_ground = this.y >= canvas.height - ground_height - 10;
 
         if(this.y < 0){
             this.y = 0;
