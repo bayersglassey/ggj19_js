@@ -18,6 +18,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 var delay = 30;
 var canvas = document.getElementById('canvas');
 
+var ground_height = 50;
+
 init();
 
 var KUP = 38;
@@ -189,7 +191,6 @@ update(Entity.prototype, {
     },
 });
 
-
 function Fly(options){
     /* Javascript class inheritance?? */
     options = options || {};
@@ -338,8 +339,6 @@ update(Flower.prototype, Entity.prototype);
 update(Flower.prototype, {
     type: 'flower',
 });
-
-
 
 var fly = new Fly();
 
