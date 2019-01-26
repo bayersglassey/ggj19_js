@@ -8,7 +8,6 @@
 ></script>
 <link rel="stylesheet" href="reset.css">
 <link rel="stylesheet" href="main.css">
-
 </head>
 <body>
 <ul>
@@ -27,7 +26,13 @@
   </li>
 </ul>
 
+<!-- Load sprite elements before the script, since it tries to
+find the sprites as soon as it loads -->
+<img id="bee_sprite" src="/img/bee.png" style="display: none;">
 
 <script src="/game.js"></script>
+
+<embed src="/music/ClapClapSlap.wav" autostart="true" loop="true" hidden="true">
+
 </body>
 </html>

@@ -17,6 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var canvas = document.getElementById('canvas');
+var bee_sprite = document.getElementById('bee_sprite');
 
 var ground_height = 50;
 
@@ -59,6 +60,24 @@ function interpolate_rgb(r0, g0, b0, r1, g1, b1, t){
 }
 
 
+function drawImage(ctx, image, x, y, scale, rotation){
+    /* Lifted from https://stackoverflow.com/a/43155027 */
+    ctx.save();
+    ctx.setTransform(scale, 0, 0, scale, x, y); // sets scale and origin
+    ctx.rotate(rotation);
+    ctx.drawImage(image, -image.width / 2, -image.height / 2);
+    ctx.restore();
+}
+
+function drawImageCenter(ctx, image, x, y, cx, cy, scale, rotation){
+    /* Lifted from https://stackoverflow.com/a/43155027 */
+    ctx.save();
+    ctx.setTransform(scale, 0, 0, scale, x, y); // sets scale and origin
+    ctx.rotate(rotation);
+    ctx.drawImage(image, -cx, -cy);
+    ctx.restore();
+}
+
 
 var entities = [];
 function Entity(options){
@@ -82,6 +101,11 @@ function Entity(options){
     this.color = 'green';
     this.fillcolor = 'lightgreen';
     this.trail_color = 'cyan';
+
+    this.sprite = null;
+    /* NOTE: if sprite_w, sprite_h are null, render() will use this.radius*2 instead */
+    this.sprite_w = null;
+    this.sprite_h = null;
 
     /* Caller can override default attributes */
     update(this, options);
@@ -163,13 +187,37 @@ update(Entity.prototype, {
             ctx.stroke();
         }
 
-        /* Render a ...fly */
-        ctx.strokeStyle = this.color;
-        ctx.fillStyle = this.fillcolor;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
+        //var DRAW_CIRCLE = !this.sprite; /* If no sprite provided, draw a circle */
+        var DRAW_CIRCLE = true; /* For debugging, nice to see circle so you can tell when things will collide */
+        if(DRAW_CIRCLE){
+            ctx.strokeStyle = this.color;
+            ctx.fillStyle = this.fillcolor;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        if(this.sprite){
+            /* Render sprite, if provided */
+            var OLDSCHOOL = false;
+            if(OLDSCHOOL){
+                /* How we used to do it before copy-pasting magic stuff
+                off StackOverflow */
+                var w = this.sprite_w? this.sprite_w: this.radius * 2;
+                var h = this.sprite_h? this.sprite_h: this.radius * 2;
+                var dx = this.x - w / 2;
+                var dy = this.y - h / 2;
+                ctx.drawImage(this.sprite, dx, dy, w, h);
+            }else{
+                /* Now we are all pros */
+                var dx = this.x;
+                var dy = this.y;
+                var rot = this.orientation / (Math.PI/180);
+                //console.log("rot", this.orientation, rot);
+                drawImage(ctx, this.sprite, dx, dy, 1, rot);
+            }
+        }
     },
     distance: function(other){
         /* The classic Pythagoreas! */
@@ -194,7 +242,11 @@ update(Entity.prototype, {
 function Fly(options){
     /* Javascript class inheritance?? */
     options = options || {};
+    options.radius = 10;
     options.accel = .85;
+    options.sprite = bee_sprite;
+    options.sprite_w = 30;
+    options.sprite_h = 30;
     Entity.call(this, options);
 
     this.min_stamina = 15; /* Go below this, and you can no longer fly!.. */
@@ -222,8 +274,10 @@ update(Fly.prototype, {
     },
     step: function(){
 
-        //rotates w motion
-        this.orientation = Math.atan(this.vx/this.vy);
+        if(this.vx){
+            //rotates w motion
+            this.orientation = Math.atan(this.vy/this.vx);
+        }
 
         if(this.stamina < this.min_stamina){
             /* Not enough stamina to fly! */
@@ -397,7 +451,9 @@ function render(){
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     /* Render entities */
-    for(var i = 0; i < entities.length; i++){
+    /* NOTE: We render them last to first, so you can see the fly on
+    top of the droplets */
+    for(var i = entities.length - 1; i >= 0; i--){
         var entity = entities[i];
         entity.render();
     }
