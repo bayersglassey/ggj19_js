@@ -114,6 +114,10 @@ update(Entity.prototype, {
             this.x = canvas.width - 1;
             this.vx *= -this.bounce;
         }
+
+        /* You're considered on the ground if you're within 10 pixels of it */
+        this.on_ground = this.y >= canvas.height - 10;
+
         if(this.y < 0){
             this.y = 0;
             this.vy *= -this.bounce;
@@ -172,7 +176,13 @@ update(Entity.prototype, {
 
 function Fly(options){
     /* Javascript class inheritance?? */
+    options = options || {};
+    options.accel = .85;
     Entity.call(this, options);
+
+    this.min_stamina = 15; /* Go below this, and you can no longer fly!.. */
+    this.max_stamina = 100;
+    this.stamina = this.max_stamina;
 
     this.grab_springiness = .001;
     this.grab_cooldown = 0;
@@ -192,7 +202,26 @@ update(Fly.prototype, {
         }
     },
     step: function(){
+        if(this.stamina < this.min_stamina){
+            /* Not enough stamina to fly! */
+            this.gravity = .75;
+        }else{
+            /* Always a tiny bit of gravity, otherwise when you're
+            trying to rest on the ground you can accidentally rise off it */
+            this.gravity = .05;
+        }
+
         Entity.prototype.step.call(this);
+
+        if(this.on_ground){
+            /* While "resting" on the ground, you regain stamina slowly */
+            this.stamina += 2;
+            if(this.stamina > this.max_stamina)this.stamina = this.max_stamina;
+        }else{
+            /* While flying, you lose stamina */
+            this.stamina -= .5;
+            if(this.stamina < 0)this.stamina = 0;
+        }
 
         if(this.grab_cooldown > 0){
             this.grab_cooldown--;
@@ -253,12 +282,15 @@ update(Droplet.prototype, {
                 t);
         }
 
-        /* Old droplets "pop" by expanding, then disappearing */
         if(this.age > this.max_age){
+            /* Old droplets "pop" by quickly expanding, then disappearing */
             this.radius += 2;
-            if(this.radius > 25){
+            if(this.radius > 30){
                 this.die();
             }
+        }else{
+            /* Droplets slowly expand to give you an idea of their age */
+            this.radius += .05;
         }
     },
 });
@@ -309,10 +341,24 @@ function render(){
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    /* Render entities */
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
         entity.render();
     }
+
+    /* Render stamina bar */
+    var bar = {
+        x: 10,
+        y: 10,
+        w: 200,
+        h: 25,
+    };
+    var ratio = fly.stamina / fly.max_stamina;
+    ctx.strokeStyle = 'black';
+    ctx.strokeRect(bar.x, bar.y, bar.w, bar.h); /* unfilled rectangle */
+    ctx.fillStyle = 'red';
+    ctx.fillRect(bar.x, bar.y, bar.w * ratio, bar.h); /* filled rectangle */
 }
 
 function keydown(event){
