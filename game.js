@@ -200,6 +200,8 @@ function Fly(options){
     this.max_stamina = 100;
     this.stamina = this.max_stamina;
 
+    this.orientation = 0; //0 to 2*Math.PI to rotate image!
+
     this.grab_springiness = .001;
     this.grab_cooldown = 0;
     this.grabbed_things = [];
@@ -218,6 +220,10 @@ update(Fly.prototype, {
         }
     },
     step: function(){
+
+        //rotates w motion
+        this.orientation = Math.atan(this.vx/this.vy);
+
         if(this.stamina < this.min_stamina){
             /* Not enough stamina to fly! */
             this.gravity = .75;
