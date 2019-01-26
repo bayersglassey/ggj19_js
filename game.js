@@ -30,6 +30,9 @@ var KS = 83;
 var KD = 68;
 var KSPACE = 32;
 var kdown = {};
+var mdown = false;
+var mousex;
+var mousey;
 
 var tick = 0;
 
@@ -72,6 +75,14 @@ update(Entity.prototype, {
         if(kdown[KDOWN]||kdown[KS])this.vy+=this.accel;
         if(kdown[KLEFT]||kdown[KA])this.vx-=this.accel;
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
+
+        if(mdown){
+          var distx = this.x - mousex;
+          var disty = this.y - mousey;
+          var dist = Math.sqrt(distx * distx + disty * disty);
+          this.vx-=this.accel * distx / dist;
+          this.vy-=this.accel * disty / dist;
+        };
     },
     step: function(){
         if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
@@ -224,7 +235,19 @@ for(var i = 0; i < n_droplets; i++){
 function init(){
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
-    $(document).on('click', click);
+    //$(document).on('click', click);
+    $(document).on('mousedown',mousedown);
+    $(document).on('mouseup',mouseup);
+    $(document).on('mousemove',mousemove);
+    //$(document).on('mousemove',);
+
+    // var intervalId;
+    // $(document).on('mousedown', function(event) {
+    //   intervalId = setInterval(click(event), 100);
+    // }).mouseup(function() {
+    //   clearInterval(intervalId);
+    //   //console.log('up');
+    // });
     setInterval(step, delay);
 }
 
@@ -260,13 +283,27 @@ function keyup(event){
     kdown[event.keyCode] = false;
 }
 
-function click(event){
-    //console.log(event);
-    var target_x = event.offsetX;
-    var target_y = event.offsetY;
-    var mul = .1;
-    var addx = (target_x - fly.x) * mul;
-    var addy = (target_y - fly.y) * mul;
-    fly.vx += addx;
-    fly.vy += addy;
+function mousedown(event){
+    mdown = true;
 }
+
+function mouseup(event){
+    mdown = false;
+}
+
+function mousemove(event){
+    mousex = event.pageX;
+    mousey = event.pageY;
+}
+
+// function click(event){
+//     console.log(event)
+//     var target_x = event.pageX;
+//     var target_y = event.pageY;
+//     var mul = .1;
+//     var difx = (target_x - fly.x);
+//     var dify = (target_y - fly.y);
+//     var distance = Math.sqrt(difx * difx + dify * dify);
+//     fly.vx += difx / distance;
+//     fly.vy += dify / distance;
+// }
