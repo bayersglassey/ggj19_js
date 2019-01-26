@@ -60,10 +60,10 @@ Entity.prototype = {
         if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
         if(this.trails.length > this.max_n_trails)this.trails.shift();
 
-        if(kdown[KUP])this.vy-=this.accel;
-        if(kdown[KDOWN])this.vy+=this.accel;
-        if(kdown[KLEFT])this.vx-=this.accel;
-        if(kdown[KRIGHT])this.vx+=this.accel;
+        if(kdown[KUP]||kdown[KW])this.vy-=this.accel;
+        if(kdown[KDOWN]||kdown[KS])this.vy+=this.accel;
+        if(kdown[KLEFT]||kdown[KA])this.vx-=this.accel;
+        if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
 
         this.x += this.vx;
         this.y += this.vy;
@@ -141,7 +141,7 @@ function render(){
 }
 
 function keydown(event){
-    console.log("KEY DOWN", event.keyCode);
+    //console.log("KEY DOWN", event.keyCode);
     kdown[event.keyCode] = true;
 }
 
