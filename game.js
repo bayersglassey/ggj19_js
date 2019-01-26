@@ -13,6 +13,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 */
 
+'use strict';
+
 var delay = 30;
 var canvas = document.getElementById('canvas');
 
@@ -32,7 +34,7 @@ var kdown = {};
 var tick = 0;
 
 function update(obj1, obj2){
-    for(key in obj2){
+    for(var key in obj2){
         obj1[key] = obj2[key];
     }
 }
