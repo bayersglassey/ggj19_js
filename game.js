@@ -27,21 +27,41 @@ var fly_radius = 10;
 function init(){
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
+    $(document).on('click', click);
     setInterval(step, delay);
 }
 
 function step(){
     tick++;
+
+    if(tick % 3 === 0)trails.push({x:x, y:y});
+    if(trails.length > max_n_trails)trails.shift();
+
     if(kdown[KUP])vy-=accel;
     if(kdown[KDOWN])vy+=accel;
     if(kdown[KLEFT])vx-=accel;
     if(kdown[KRIGHT])vx+=accel;
-    if(tick % 3 === 0)trails.push({x:x, y:y});
-    if(trails.length > max_n_trails)trails.shift();
+
     x += vx;
     y += vy;
+    if(x < 0){
+        x = 0;
+        vx *= -.5;
+    }else if(x >= canvas.width){
+        x = canvas.width - 1;
+        vx *= -.5;
+    }
+    if(y < 0){
+        y = 0;
+        vy *= -.5;
+    }else if(y >= canvas.height){
+        y = canvas.height - 1;
+        vy *= -.5;
+    }
+
     vx *= damp;
     vy *= damp;
+
     render();
 }
 
@@ -81,6 +101,17 @@ function keydown(event){
 
 function keyup(event){
     kdown[event.keyCode] = false;
+}
+
+function click(event){
+    console.log(event);
+    var target_x = event.offsetX;
+    var target_y = event.offsetY;
+    var mul = .1;
+    var addx = (target_x - x) * mul;
+    var addy = (target_y - y) * mul;
+    vx += addx;
+    vy += addy;
 }
 
 
