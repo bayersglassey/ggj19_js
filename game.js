@@ -17,7 +17,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var canvas = document.getElementById('canvas');
-var bee_sprite = document.getElementById('bee_sprite');
+var bee_sprite = {
+    crawl: document.getElementById('bee_left_sprite'),
+    fly: document.getElementById('bee_sprite'),
+}
 
 init();
 
@@ -101,9 +104,14 @@ function Entity(options){
     this.trail_color = 'cyan';
 
     this.sprite = null;
+    /* If not null, sprite should be an object whose keys are frame names,
+    and whose values are <img> elements */
+
     /* NOTE: if sprite_w, sprite_h are null, render() will use this.radius*2 instead */
     this.sprite_w = null;
     this.sprite_h = null;
+
+    this.frame = 'fly'; /* Should be a key of this.sprite (if used) */
 
     /* Caller can override default attributes */
     update(this, options);
@@ -198,22 +206,26 @@ update(Entity.prototype, {
 
         if(this.sprite){
             /* Render sprite, if provided */
+
+            var image = this.sprite[this.frame];
+            var w = this.sprite_w? this.sprite_w: this.radius * 2;
+            var h = this.sprite_h? this.sprite_h: this.radius * 2;
+
             var OLDSCHOOL = false;
             if(OLDSCHOOL){
                 /* How we used to do it before copy-pasting magic stuff
                 off StackOverflow */
-                var w = this.sprite_w? this.sprite_w: this.radius * 2;
-                var h = this.sprite_h? this.sprite_h: this.radius * 2;
                 var dx = this.x - w / 2;
                 var dy = this.y - h / 2;
-                ctx.drawImage(this.sprite, dx, dy, w, h);
+                ctx.drawImage(image, dx, dy, w, h);
             }else{
                 /* Now we are all pros */
                 var dx = this.x;
                 var dy = this.y;
+                var scale = w / image.width;
                 var rot = this.orientation / (Math.PI/180);
                 //console.log("rot", this.orientation, rot);
-                drawImage(ctx, this.sprite, dx, dy, 1, rot);
+                drawImage(ctx, image, dx, dy, scale, rot);
             }
         }
     },
@@ -244,8 +256,8 @@ function Fly(options){
     options.radius = 10;
     options.accel = .85;
     options.sprite = bee_sprite;
-    options.sprite_w = 30;
-    options.sprite_h = 30;
+    options.sprite_w = 50;
+    options.sprite_h = 50;
     Entity.call(this, options);
 
     this.min_stamina = 15; /* Go below this, and you can no longer fly!.. */
@@ -291,10 +303,12 @@ update(Fly.prototype, {
 
         if(this.on_ground){
             /* While "resting" on the ground, you regain stamina slowly */
+            this.frame = 'crawl';
             this.stamina += 2;
             if(this.stamina > this.max_stamina)this.stamina = this.max_stamina;
         }else{
             /* While flying, you lose stamina */
+            this.frame = 'fly';
             this.stamina -= .5;
             if(this.stamina < 0)this.stamina = 0;
         }
