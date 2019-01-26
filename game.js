@@ -58,6 +58,24 @@ function interpolate_rgb(r0, g0, b0, r1, g1, b1, t){
 }
 
 
+function drawImage(ctx, image, x, y, scale, rotation){
+    /* Lifted from https://stackoverflow.com/a/43155027 */
+    ctx.save();
+    ctx.setTransform(scale, 0, 0, scale, x, y); // sets scale and origin
+    ctx.rotate(rotation);
+    ctx.drawImage(image, -image.width / 2, -image.height / 2);
+    ctx.restore();
+}
+
+function drawImageCenter(ctx, image, x, y, cx, cy, scale, rotation){
+    /* Lifted from https://stackoverflow.com/a/43155027 */
+    ctx.save();
+    ctx.setTransform(scale, 0, 0, scale, x, y); // sets scale and origin
+    ctx.rotate(rotation);
+    ctx.drawImage(image, -cx, -cy);
+    ctx.restore();
+}
+
 
 var entities = [];
 function Entity(options){
@@ -180,11 +198,23 @@ update(Entity.prototype, {
 
         if(this.sprite){
             /* Render sprite, if provided */
-            var w = this.sprite_w? this.sprite_w: this.radius * 2;
-            var h = this.sprite_h? this.sprite_h: this.radius * 2;
-            var dx = this.x - w / 2;
-            var dy = this.y - h / 2;
-            ctx.drawImage(this.sprite, dx, dy, w, h);
+            var OLDSCHOOL = false;
+            if(OLDSCHOOL){
+                /* How we used to do it before copy-pasting magic stuff
+                off StackOverflow */
+                var w = this.sprite_w? this.sprite_w: this.radius * 2;
+                var h = this.sprite_h? this.sprite_h: this.radius * 2;
+                var dx = this.x - w / 2;
+                var dy = this.y - h / 2;
+                ctx.drawImage(this.sprite, dx, dy, w, h);
+            }else{
+                /* Now we are all pros */
+                var dx = this.x;
+                var dy = this.y;
+                var rot = this.orientation / (Math.PI/180);
+                //console.log("rot", this.orientation, rot);
+                drawImage(ctx, this.sprite, dx, dy, 1, rot);
+            }
         }
     },
     distance: function(other){
@@ -243,8 +273,10 @@ update(Fly.prototype, {
     },
     step: function(){
 
-        //rotates w motion
-        this.orientation = Math.atan(this.vx/this.vy);
+        if(this.vx){
+            //rotates w motion
+            this.orientation = Math.atan(this.vy/this.vx);
+        }
 
         if(this.stamina < this.min_stamina){
             /* Not enough stamina to fly! */
