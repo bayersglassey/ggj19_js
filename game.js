@@ -23,6 +23,7 @@ var bee_sprite = {
 }
 
 var ground_height = 50;
+var ground_y = canvas.height - ground_height;
 
 init();
 
@@ -164,13 +165,13 @@ update(Entity.prototype, {
         }
 
         /* You're considered on the ground if you're within 10 pixels of it */
-        this.on_ground = this.y >= canvas.height - ground_height - 10;
+        this.on_ground = this.y >= ground_y - 10;
 
         if(this.y < 0){
             this.y = 0;
             this.vy *= -this.bounce;
-        }else if(this.y >= canvas.height){
-            this.y = canvas.height - 1;
+        }else if(this.y >= ground_y){
+            this.y = ground_y - 1;
             this.vy *= -this.bounce;
         }
 
