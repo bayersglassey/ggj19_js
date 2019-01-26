@@ -405,15 +405,3 @@ function mousemove(event){
     mousex = event.pageX;
     mousey = event.pageY;
 }
-
-// function click(event){
-//     console.log(event)
-//     var target_x = event.pageX;
-//     var target_y = event.pageY;
-//     var mul = .1;
-//     var difx = (target_x - fly.x);
-//     var dify = (target_y - fly.y);
-//     var distance = Math.sqrt(difx * difx + dify * dify);
-//     fly.vx += difx / distance;
-//     fly.vy += dify / distance;
-// }
