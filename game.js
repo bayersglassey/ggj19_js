@@ -48,6 +48,7 @@ var ground_y = canvas.height - ground_height;
 
 var n_seeds = 10;
 
+var n_spiders = 2;
 init();
 
 var KUP = 38;
@@ -631,6 +632,67 @@ update(Flower.prototype, {
 });
 
 
+function Spider(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    options.accel = 3;
+    options.radius = 25;
+    options.max_radius = 60;
+    options.damp = .99;
+    options.gravity = .1;
+    options.color = 'red';
+    options.fillcolor = 'black';
+    options.max_n_trails = 0;
+    options.x = Math.random() * canvas.width;
+    options.y = 1000;
+    //options.sprite = seed_sprite;
+    //options.frame = 'unhatched';
+    /* random velocity (vx, vy) so seeds are "scattered" from the sky
+     on page load */
+    options.vx = Math.random() * 20 - 10;
+    //options.vy = Math.random() * 10 - 5;
+
+    Entity.call(this, options);
+}
+update(Spider.prototype, Entity.prototype);
+update(Spider.prototype, {
+    type: 'spider',
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        var collided_entities = this.get_collided_entities();
+        for(var i = 0; i < collided_entities.length; i++) {
+            var other = collided_entities[i];
+            if (other.type !== 'fly')continue;
+
+            //if spider eats fly then he gets bigger
+            this.radius += 10;
+
+            other.die();
+            //may want to reload or generate button to restart
+        }
+
+        //this is rate at which a spider action occurs
+        var randMover = Math.round(Math.random()*240);
+        //console.log(randMover);
+        if(randMover == 1){
+            this.vy-=this.accel;
+        }
+        if(randMover == 2){
+            this.vx+=this.accel;
+            console.log("rand 2 triggered");
+        }
+        if(randMover == 3){
+            this.vx-=this.accel;
+        }
+        if(randMover == 4){
+            this.radius += 0.5;
+            this.accel += 0.1;
+        }
+        //this.vx-=this.accel
+
+    },
+});
 
 /* HomeBG is the big thing which looks like a flower.
 It doesn't do anything except look pretty. */
@@ -729,7 +791,9 @@ var fly = new Fly();
 for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
-
+for(var i = 0; i < n_spiders; i++){
+    new Spider();
+}
 backgroundMusic.play();
 //this loops the music
 document.getElementById("bMsc").addEventListener('ended', function(){
