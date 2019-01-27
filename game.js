@@ -17,6 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var USE_BACKGROUND = true;
+var ANIMATE_HOME = false;
 
 var background = document.getElementById('background');
 var canvas = document.getElementById('canvas');
@@ -31,9 +32,16 @@ var seed_sprite = {
 var flower_sprite = {
     lily: document.getElementById('flower_lily_sprite'),
 };
-var home_sprite = {
-    home: document.getElementById('home_sprite'),
-};
+var home_sprite;
+if(ANIMATE_HOME){
+    home_sprite = {
+        home: document.getElementById('home_animated_sprite'),
+    };
+}else{
+    home_sprite = {
+        home: document.getElementById('home_sprite'),
+    };
+}
 
 var ground_height = 85;
 var ground_y = canvas.height - ground_height;
@@ -600,6 +608,33 @@ function HomeBG(options){
 update(HomeBG.prototype, Entity.prototype);
 update(HomeBG.prototype, {
     type: 'home_bg',
+    render: function(){
+        if(!ANIMATE_HOME)return Entity.prototype.render.call(this);
+
+        var ctx = canvas.getContext('2d');
+
+        var image = this.sprite[this.frame];
+
+        var n_frames_x = 5;
+        var n_frames_y = 5;
+        var n_frames = n_frames_x * n_frames_y;
+
+        var frame_w = image.width / n_frames_x;
+        var frame_h = image.height / n_frames_y;
+
+        var frame_i = tick % n_frames;
+        var frame_x = frame_i % n_frames_x;
+        var frame_y = Math.floor(frame_i / n_frames_y);
+
+        var w = this.sprite_w? this.sprite_w: this.radius * 2;
+        var h = this.sprite_h? this.sprite_h: this.radius * 2;
+        var dx = this.x - w / 2;
+        var dy = this.y - h / 2;
+
+        ctx.drawImage(image,
+            frame_x*frame_w, frame_y*frame_h, frame_w, frame_h,
+            dx, dy, w, h);
+    },
 });
 
 
