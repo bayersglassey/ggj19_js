@@ -19,7 +19,7 @@ var delay = 30;
 var USE_BACKGROUND = true;
 var DEBUG_RENDER = false;
 
-var render_priority = ['home_bg', 'home', 'spider', 'seed', 'flower', 'droplet', 'bee'];
+var render_priority = ['home_bg', 'home', 'daisy', 'seed', 'flower', 'droplet', 'spider', 'bee'];
 
 var canvas = document.getElementById('canvas');
 
@@ -44,6 +44,20 @@ var seed_sprite = {
 var flower_sprite = {
     lily: {image: document.getElementById('flower_lily_sprite')},
 };
+var daisy_sprite = {
+    daisy1: {
+        animated: true,
+        n_frames_x: 5,
+        n_frames_y: 5,
+        image: document.getElementById('flower_daisy1_sprite'),
+    },
+    daisy2: {
+        animated: true,
+        n_frames_x: 7,
+        n_frames_y: 1,
+        image: document.getElementById('flower_daisy2_sprite'),
+    },
+};
 var home_sprite = {
     home: {
         animated: true,
@@ -65,6 +79,7 @@ var ground_height = 75;
 var ground_y = canvas.height - ground_height;
 
 var n_seeds = 10;
+var n_daisies = 5;
 var n_flowers_collected = 0;
 function game_won(){
     return n_seeds === n_flowers_collected;
@@ -88,8 +103,6 @@ var kdown = {};
 var mdown = false;
 var mousex;
 var mousey;
-
-var tick = 0;
 
 var backgroundMusic = new sound("/music/ClapClapSlap.wav" , "bMsc", .5);
 var collideSound = new sound("/sounds/BoopEffect.wav", "collideSnd");
@@ -293,7 +306,7 @@ update(Entity.prototype, {
     step: function(){
         this.age++;
 
-        if(tick % 3 === 0)this.trails.push({x:this.x, y:this.y});
+        if(this.age % 3 === 0)this.trails.push({x:this.x, y:this.y});
         if(this.trails.length > this.max_n_trails)this.trails.shift();
 
         this.vy += this.gravity;
@@ -382,9 +395,9 @@ update(Entity.prototype, {
         var frame_w = image.width / n_frames_x;
         var frame_h = image.height / n_frames_y;
 
-        var frame_i = tick % n_frames;
+        var frame_i = this.age % n_frames;
         var frame_x = frame_i % n_frames_x;
-        var frame_y = Math.floor(frame_i / n_frames_y);
+        var frame_y = Math.floor(frame_i / n_frames_x);
 
         var w = (this.radius * this.sprite_radius_multiplier) * 2;
         var h = (this.radius * this.sprite_radius_multiplier) * 2;
@@ -503,6 +516,10 @@ update(Bee.prototype, {
             this.grab_cooldown = 10;
         }
     },
+    add_stamina: function(amount){
+        this.stamina += amount;
+        if(this.stamina > this.max_stamina)this.stamina = this.max_stamina;
+    },
     step: function(){
 
         remove_dead_stuff(this.grabbed_things);
@@ -524,13 +541,15 @@ update(Bee.prototype, {
         Entity.prototype.step.call(this);
 
         if(this.on_ground){
-            /* While "resting" on the ground, you regain stamina slowly */
             this.frame = 'crawl';
-            this.stamina += 2;
-            if(this.stamina > this.max_stamina)this.stamina = this.max_stamina;
+
+            /* While "resting" on the ground, you regain stamina very slowly.
+            (Pick up daisies to gain it faster.) */
+            this.add_stamina(.25);
         }else{
-            /* While flying, you lose stamina */
             this.frame = 'fly';
+
+            /* While flying, you lose stamina */
             this.stamina -= .5;
             if(this.stamina < 0)this.stamina = 0;
         }
@@ -542,17 +561,26 @@ update(Bee.prototype, {
             var collided_entities = this.get_collided_entities();
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
-                if(!(
+                if(
                     other.type === 'droplet' ||
                     other.type === 'flower'
                     //(other.type === 'seed' && other.frame === 'hatched')
-                ))continue;
-                if(this.grabbed_things.indexOf(other) >= 0)continue;
+                ){
+                    if(this.grabbed_things.indexOf(other) >= 0)continue;
 
-                /* Grab the thing! */
-                this.grabbed_things.push(other);
-                collideSound.play();
-                other.pick_up();
+                    /* Grab the thing! */
+                    this.grabbed_things.push(other);
+                    collideSound.play();
+                    other.pick_up();
+                }else if(other.type === 'daisy' && other.frame === 'daisy2'){
+                    /* Picking daisies gives you stamina... just like real life. */
+                    this.add_stamina(10);
+
+                    /* When a daisy is collected by player, it disappears, but a
+                    new one should pop up somewhere else. */
+                    other.die();
+                    new Daisy();
+                }
             }
         }
 
@@ -751,6 +779,47 @@ update(Flower.prototype, {
 });
 
 
+function Daisy(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    options.radius = 30;
+    options.color = 'purple';
+    options.fillcolor = 'lightsalmon';
+    options.max_n_trails = 0;
+    options.sprite = daisy_sprite;
+    options.frame = 'daisy1';
+    options.x = Math.random() * canvas.width;
+    options.y = ground_y;
+    Entity.call(this, options);
+}
+update(Daisy.prototype, Entity.prototype);
+update(Daisy.prototype, {
+    type: 'daisy',
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        /* Daisy's sprite is unique, in that it comes in 2 separate images...
+        So we have to do a weird thing to gets its animation to work properly
+        with our system. */
+        var spriteframe = this.sprite[this.frame];
+        var n_frames = spriteframe.n_frames_x * spriteframe.n_frames_y;
+        if(this.frame === 'daisy1'){
+            /* Once 'daisy1' animation is done, switch to 'daisy2' */
+            if(this.age >= n_frames){
+                this.age = 0;
+                this.frame = 'daisy2';
+            }
+        }else if(this.frame === 'daisy2'){
+            /* Once 'daisy2' animation is done, pause forever on the last frame
+            (because the daisy has fully sprouted) */
+            if(this.age >= n_frames){
+                this.age = n_frames - 1;
+            }
+        }
+    },
+});
+
+
 function Spider(options){
     /* Javascript class inheritance?? */
     options = options || {};
@@ -856,7 +925,7 @@ update(Home.prototype, {
         Entity.prototype.step.call(this);
 
         /* Periodically create new Droplets */
-        if(tick % 25 === 0){
+        if(this.age % 25 === 0){
             new Droplet({
                 x: this.x,
                 y: this.y,
@@ -895,6 +964,9 @@ var bee = new Bee();
 for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
+for(var i = 0; i < n_daisies; i++){
+    new Daisy();
+}
 for(var i = 0; i < n_spiders; i++){
     new Spider();
 }
@@ -931,8 +1003,6 @@ function remove_dead_stuff(entities){
 }
 
 function step(){
-    tick++;
-
     bee.do_key_stuff();
 
     /* Let entities do whatever it is they do each frame */
