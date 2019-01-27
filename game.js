@@ -164,7 +164,7 @@ function get_orientation(x, y){
 
         So Math.atan(x) is between -90 degrees to +90 degrees
     */
-    var orientation = y === 0? 0: Math.atan(-y/x);
+    var orientation = x === 0? Math.PI/2: Math.atan(-y/x);
     if(x < 0)orientation += Math.PI;
     return orientation;
 }
@@ -271,11 +271,13 @@ update(Entity.prototype, {
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
 
         if(mdown){
-          var distx = this.x - mousex;
-          var disty = this.y - mousey;
-          var dist = Math.sqrt(distx * distx + disty * disty);
-          this.vx-=this.accel * distx / dist;
-          this.vy-=this.accel * disty / dist;
+            var distx = this.x - mousex;
+            var disty = this.y - mousey;
+            var dist = Math.sqrt(distx * distx + disty * disty);
+            if(dist){
+                this.vx -= this.accel * distx / dist;
+                this.vy -= this.accel * disty / dist;
+            }
         };
     },
     step: function(){
@@ -958,10 +960,10 @@ function render(){
     ctx.fillRect(bar.x, bar.y, bar.w * ratio, bar.h); /* filled rectangle */
 
     /* Render a message */
-    if(game_won())draw_message("YOU WIN",
-        "you win you win you win you win");
-    else if(fly.dead)draw_message("YOU DED",
-        "Refresh your browser to try once more");
+    if(game_won())draw_message("Congratulations",
+        "Because your home flower is huge now.");
+    else if(fly.dead)draw_message("Eaten by a spider",
+        "Reload the page to try again!");
 }
 
 function keydown(event){
