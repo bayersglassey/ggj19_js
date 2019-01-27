@@ -451,13 +451,13 @@ update(Fly.prototype, {
             this.orientation = get_orientation(this.vx, this.vy);
         }
 
-        if(this.stamina < this.min_stamina){
-            /* Not enough stamina to fly! */
-            this.gravity = .75;
-        }else{
+        if(this.stamina > 0){
             /* Always a tiny bit of gravity, otherwise when you're
             trying to rest on the ground you can accidentally rise off it */
             this.gravity = .05;
+        }else{
+            /* Not enough stamina to fly! */
+            this.gravity = .85;
         }
 
         Entity.prototype.step.call(this);
