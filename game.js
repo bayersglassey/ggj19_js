@@ -17,7 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var USE_BACKGROUND = true;
-var ANIMATE_HOME = false;
+var ANIMATE_HOME = true;
 
 var background = document.getElementById('background');
 var canvas = document.getElementById('canvas');
