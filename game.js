@@ -342,19 +342,27 @@ update(Entity.prototype, {
         }
         return collided_entities;
     },
-    spring_xy: function(x, y, springiness){
+    spring_xy: function(x, y, springiness, min_distance){
         /* Changes our velocity so it's like we're connected to
         (x, y) by a spring... */
+        min_distance = min_distance || 0;
         var distance = this.distance_xy(x,y);
-        var mul = distance * springiness;
-        var addx = (x - this.x) * mul;
-        var addy = (y - this.y) * mul;
-        this.vx += addx;
-        this.vy += addy;
+        if(distance >= min_distance){
+            var mul = distance * springiness;
+            var addx = (x - this.x) * mul;
+            var addy = (y - this.y) * mul;
+            this.vx += addx;
+            this.vy += addy;
+        }
     },
-    spring: function(other, springiness){
-        this.spring_xy(other.x, other.y, springiness);
+    spring: function(other, springiness, min_distance){
+        this.spring_xy(other.x, other.y, springiness, min_distance);
     },
+    pick_up: function(){
+        /* Nothing happens by default when player picks something up,
+        but "subclasses" of Entity can override this function to do
+        something special */
+    }
 });
 
 function Fly(options){
@@ -439,6 +447,7 @@ update(Fly.prototype, {
                 /* Grab the thing! */
                 this.grabbed_things.push(other);
                 collideSound.play();
+                other.pick_up();
             }
         }
 
@@ -455,12 +464,16 @@ function Droplet(options){
     /* Javascript class inheritance?? */
     options = options || {};
     options.damp = .985;
-    options.gravity = .3;
+    options.gravity = 0;
     options.color = 'rgba(0, 0, 255, .8)';
     options.fillcolor = 'rgba(128, 128, 255, .4)';
     options.trail_color = 'lightblue';
     options.max_n_trails = 5;
     Entity.call(this, options);
+
+    this.attached_to_home = true;
+    this.home_spring_min_distance = 40;
+    this.home_springiness = .0003;
 
     /* Radius starts at start_radius, grows by add_radius_normal pixels
     per frame, once it hits pop_after_radius it grows by add_radius_popping
@@ -468,7 +481,7 @@ function Droplet(options){
     removed from game) */
     this.start_radius = 10;
     this.radius = this.start_radius;
-    this.add_radius_normal = .02;
+    this.add_radius_normal = .04;
     this.add_radius_popping = 3;
     this.pop_after_radius = 20;
     this.die_after_radius = 50;
@@ -476,9 +489,18 @@ function Droplet(options){
 update(Droplet.prototype, Entity.prototype);
 update(Droplet.prototype, {
     type: 'droplet',
+    is_popping: function(){
+        return this.radius >= this.pop_after_radius;
+    },
     step: function(){
         Entity.prototype.step.call(this);
-        if(this.radius >= this.pop_after_radius){
+
+        /* Droplets start off attached to the Home flower */
+        if(this.attached_to_home){
+            this.spring(home, this.home_springiness, this.home_spring_min_distance);
+        }
+
+        if(this.is_popping()){
             /* Old droplets "pop" by quickly expanding, then disappearing */
             this.radius += this.add_radius_popping;
             if(this.radius > this.die_after_radius){
@@ -488,6 +510,13 @@ update(Droplet.prototype, {
             /* Droplets slowly expand to give you an idea of their age */
             this.radius += this.add_radius_normal;
         }
+    },
+    pick_up: function(){
+        Entity.prototype.pick_up.call(this);
+
+        /* Picking a droplet detaches it from the home flower */
+        this.attached_to_home = false;
+        this.gravity = .3;
     },
 });
 
@@ -527,6 +556,7 @@ update(Seed.prototype, {
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
                 if(other.type !== 'droplet')continue;
+                if(other.is_popping())continue;
 
                 /* Drain water from the droplet and add to seed's size */
                 this.radius += 1;
@@ -563,7 +593,9 @@ function Flower(options){
     Entity.call(this, options);
 
     /* The flower has a "base" from which it floats upwards...
-    It's connected to the base with springy physics */
+    It's connected to the base with springy physics.
+    When bee picks up a flower, it gets detached from its "base" */
+    this.attached_to_base = true;
     this.base_x = this.x;
     this.base_y = this.y;
     this.base_springiness = .0001;
@@ -583,9 +615,18 @@ update(Flower.prototype, {
         this.radius += this.add_radius;
         if(this.radius > this.max_radius)this.radius = this.max_radius;
 
-        /* Flowers float upwards (gravity < 0) but are tethered to
-        a "base" position with springy physics */
-        this.spring_xy(this.base_x, this.base_y, this.base_springiness);
+        if(this.attached_to_base){
+            /* Flowers float upwards (gravity < 0) but are tethered to
+            a "base" position with springy physics */
+            this.spring_xy(this.base_x, this.base_y, this.base_springiness);
+        }
+    },
+    pick_up: function(){
+        Entity.prototype.pick_up.call(this);
+
+        /* Picking a flower detaches it from its base */
+        this.attached_to_base = false;
+        this.gravity = .2;
     },
 });
 
