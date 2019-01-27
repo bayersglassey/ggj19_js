@@ -490,7 +490,7 @@ update(Fly.prototype, {
             throwSound.play();
 
             /* Wait 5 frames before picking stuff up again */
-            this.grab_cooldown = 5;
+            this.grab_cooldown = 10;
         }
     },
     step: function(){
@@ -534,8 +534,8 @@ update(Fly.prototype, {
                 var other = collided_entities[i];
                 if(!(
                     other.type === 'droplet' ||
-                    other.type === 'flower' ||
-                    (other.type === 'seed' && other.frame === 'hatched')
+                    other.type === 'flower'
+                    //(other.type === 'seed' && other.frame === 'hatched')
                 ))continue;
                 if(this.grabbed_things.indexOf(other) >= 0)continue;
 
@@ -595,7 +595,8 @@ update(Droplet.prototype, {
 
         /* Droplets start off attached to the Home flower */
         if(this.attached_to_home){
-            this.spring(home, this.home_springiness, this.home_spring_min_distance);
+            this.spring(home, this.home_springiness,
+                this.home_spring_min_distance);
         }
 
         if(this.is_popping()){
@@ -668,6 +669,8 @@ update(Seed.prototype, {
             /* If seed sucks up enough water, it hatches a flower */
             if(this.radius > this.max_radius){
                 this.frame = 'hatched';
+                this.gravity = .2;
+                this.radius *= .8;
 
                 /* Fling a new flower upwards from ground */
                 new Flower({
@@ -686,7 +689,7 @@ function Flower(options){
     /* Javascript class inheritance?? */
     options = options || {};
     options.damp = .99;
-    options.gravity = -.3;
+    options.gravity = -.5;
     options.color = 'purple';
     options.fillcolor = 'lightsalmon';
     options.max_n_trails = 0;
@@ -699,7 +702,8 @@ function Flower(options){
     When bee picks up a flower, it gets detached from its "base".
     The base is presumably the seed the flower sprouted from... */
     this.attached_to_base = true;
-    this.base_springiness = .0001;
+    this.base_springiness = .0002;
+    this.base_spring_min_distance = 30;
 
     /* When flowers are created, they "pop" into existence */
     this.radius = 5;
@@ -719,7 +723,8 @@ update(Flower.prototype, {
         if(this.attached_to_base){
             /* Flowers float upwards (gravity < 0) but are tethered to
             a "base" entity with springy physics */
-            this.spring(this.base, this.base_springiness);
+            this.spring(this.base, this.base_springiness,
+                this.base_spring_min_distance);
         }
     },
     pick_up: function(){
@@ -840,6 +845,16 @@ update(Home.prototype, {
     step: function(){
         Entity.prototype.step.call(this);
 
+        /* Periodically create new Droplets */
+        if(tick % 25 === 0){
+            new Droplet({
+                x: this.x,
+                y: this.y,
+                vx: Math.random() * 20 - 10,
+                vy: Math.random() * 20 - 20,
+            });
+        }
+
         /* When flowers are delivered to the Home, they disappear
         and it grows... */
         var collided_entities = this.get_collided_entities();
@@ -909,15 +924,6 @@ function step(){
     tick++;
 
     fly.do_key_stuff();
-
-    if(tick % 25 === 0){
-        new Droplet({
-            x: home.x,
-            y: home.y,
-            vx: Math.random() * 20 - 10,
-            vy: Math.random() * 20 - 20,
-        });
-    }
 
     /* Let entities do whatever it is they do each frame */
     for(var i = 0; i < entities.length; i++){
