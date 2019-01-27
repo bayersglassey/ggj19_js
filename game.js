@@ -318,6 +318,7 @@ function Fly(options){
     options.sprite_h = 50;
     options.color = 'orange';
     options.fillcolor = 'yellow';
+    options.trail_color = 'yellow';
     Entity.call(this, options);
 
     this.min_stamina = 15; /* Go below this, and you can no longer fly!.. */
@@ -606,11 +607,14 @@ function render(){
     }
 
     /* Render stamina bar */
+    var bar_padding_x = 20;
+    var bar_padding_y = 10;
+    var bar_h = 20;
     var bar = {
-        x: 10,
-        y: 10,
-        w: 200,
-        h: 25,
+        x: bar_padding_x,
+        y: canvas.height - bar_h - bar_padding_y,
+        w: canvas.width - bar_padding_x * 2,
+        h: bar_h,
     };
     var ratio = fly.stamina / fly.max_stamina;
     ctx.strokeStyle = 'black';
