@@ -355,8 +355,8 @@ function Fly(options){
     options.radius = 10;
     options.accel = .85;
     options.sprite = bee_sprite;
-    options.sprite_w = 50;
-    options.sprite_h = 50;
+    options.sprite_w = (options.radius + 20) * 2;
+    options.sprite_h = (options.radius + 20) * 2;
     options.color = 'orange';
     options.fillcolor = 'yellow';
     options.trail_color = 'yellow';
