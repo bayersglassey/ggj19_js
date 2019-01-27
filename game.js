@@ -56,10 +56,13 @@ var mousey;
 
 var tick = 0;
 
-var backgroundMusic = new sound("/music/ClapClapSlap.wav" , "bMsc");
+var backgroundMusic = new sound("/music/ClapClapSlap.wav" , "bMsc", .5);
 var collideSound = new sound("/sounds/BoopEffect.wav", "collideSnd");
+var throwSound = collideSound;
 
-function sound(src , ident){
+function sound(src , ident, volume){
+    volume = volume || 1;
+
     var muted = false;
     this.sound = document.createElement("audio");
     this.sound.src = src;
@@ -67,6 +70,7 @@ function sound(src , ident){
     this.sound.setAttribute("preload","auto");
     this.sound.setAttribute("controls", "none");
     this.sound.style.display = "none";
+    this.sound.volume = volume;
     document.body.appendChild(this.sound);
     this.play = function(){
         this.sound.play();
@@ -373,6 +377,7 @@ update(Fly.prototype, {
         if(kdown[KSPACE]){
             /* Drop everything we had picked up */
             this.grabbed_things = [];
+            throwSound.play();
 
             /* Wait 5 frames before picking stuff up again */
             this.grab_cooldown = 5;
@@ -417,7 +422,10 @@ update(Fly.prototype, {
                 var other = collided_entities[i];
                 if(other.type !== 'droplet')continue;
                 if(this.grabbed_things.indexOf(other) >= 0)continue;
+
+                /* Grab the thing! */
                 this.grabbed_things.push(other);
+                collideSound.play();
             }
         }
 
@@ -578,7 +586,7 @@ for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
 
-backgroundMusic.play()
+backgroundMusic.play();
 //this loops the music
 document.getElementById("bMsc").addEventListener('ended', function(){
     this.currentTime = 0;
