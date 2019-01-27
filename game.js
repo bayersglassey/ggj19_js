@@ -43,7 +43,7 @@ if(ANIMATE_HOME){
     };
 }
 
-var ground_height = 85;
+var ground_height = 75;
 var ground_y = canvas.height - ground_height;
 
 var n_seeds = 10;
@@ -193,6 +193,7 @@ function Entity(options){
     this.bounce = .5;
     this.radius = 10;
     this.gravity = 0;
+    this.collide_with_map = true;
     this.color = 'green';
     this.fillcolor = 'lightgreen';
     this.trail_color = 'cyan';
@@ -247,24 +248,31 @@ update(Entity.prototype, {
         this.x += this.vx;
         this.y += this.vy;
 
-        if(this.x < 0){
-            this.x = 0;
-            this.vx *= -this.bounce;
-        }else if(this.x >= canvas.width){
-            this.x = canvas.width - 1;
-            this.vx *= -this.bounce;
+        if(this.collide_with_map){
+            var map_l = 0 + this.radius;
+            var map_r = canvas.width - this.radius;
+            var map_t = 0 + this.radius;
+            var map_b = ground_y - this.radius;
+
+            if(this.x < map_l){
+                this.x = map_l;
+                this.vx *= -this.bounce;
+            }else if(this.x >= map_r){
+                this.x = map_r - 1;
+                this.vx *= -this.bounce;
+            }
+
+            if(this.y < map_t){
+                this.y = map_t;
+                this.vy *= -this.bounce;
+            }else if(this.y >= map_b){
+                this.y = map_b - 1;
+                this.vy *= -this.bounce;
+            }
         }
 
         /* You're considered on the ground if you're within 10 pixels of it */
-        this.on_ground = this.y >= ground_y - 10;
-
-        if(this.y < 0){
-            this.y = 0;
-            this.vy *= -this.bounce;
-        }else if(this.y >= ground_y){
-            this.y = ground_y - 1;
-            this.vy *= -this.bounce;
-        }
+        this.on_ground = this.y >= map_b - 10;
 
         this.vx *= this.damp;
         this.vy *= this.damp;
@@ -706,6 +714,8 @@ function HomeBG(options){
     options.max_n_trails = 0;
     options.sprite = home_sprite;
     options.frame = 'home';
+    options.y = canvas.height / 2;
+    options.collide_with_map = false;
     Entity.call(this, options);
 }
 update(HomeBG.prototype, Entity.prototype);
