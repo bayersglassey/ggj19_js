@@ -532,7 +532,11 @@ update(Fly.prototype, {
             var collided_entities = this.get_collided_entities();
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
-                if(other.type !== 'droplet' && other.type !== 'flower')continue;
+                if(!(
+                    other.type === 'droplet' ||
+                    other.type === 'flower' ||
+                    (other.type === 'seed' && other.frame === 'hatched')
+                ))continue;
                 if(this.grabbed_things.indexOf(other) >= 0)continue;
 
                 /* Grab the thing! */
@@ -666,8 +670,12 @@ update(Seed.prototype, {
                 this.frame = 'hatched';
 
                 /* Fling a new flower upwards from ground */
-                var new_vy = this.vy - 15;
-                new Flower({x:this.x, y:this.y, vy:new_vy});
+                new Flower({
+                    x: this.x,
+                    y: this.y,
+                    vy: this.vy - 15,
+                    base: this,
+                });
             }
         }
     },
@@ -688,10 +696,9 @@ function Flower(options){
 
     /* The flower has a "base" from which it floats upwards...
     It's connected to the base with springy physics.
-    When bee picks up a flower, it gets detached from its "base" */
+    When bee picks up a flower, it gets detached from its "base".
+    The base is presumably the seed the flower sprouted from... */
     this.attached_to_base = true;
-    this.base_x = this.x;
-    this.base_y = this.y;
     this.base_springiness = .0001;
 
     /* When flowers are created, they "pop" into existence */
@@ -711,8 +718,8 @@ update(Flower.prototype, {
 
         if(this.attached_to_base){
             /* Flowers float upwards (gravity < 0) but are tethered to
-            a "base" position with springy physics */
-            this.spring_xy(this.base_x, this.base_y, this.base_springiness);
+            a "base" entity with springy physics */
+            this.spring(this.base, this.base_springiness);
         }
     },
     pick_up: function(){
