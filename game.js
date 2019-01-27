@@ -47,12 +47,14 @@ var flower_sprite = {
 var daisy_sprite = {
     daisy1: {
         animated: true,
+        loop: true,
         n_frames_x: 5,
         n_frames_y: 5,
         image: document.getElementById('flower_daisy1_sprite'),
     },
     daisy2: {
         animated: true,
+        loop: false,
         n_frames_x: 7,
         n_frames_y: 1,
         image: document.getElementById('flower_daisy2_sprite'),
@@ -61,6 +63,7 @@ var daisy_sprite = {
 var home_sprite = {
     home: {
         animated: true,
+        loop: true,
         n_frames_x: 5,
         n_frames_y: 5,
         image: document.getElementById('home_animated_sprite'),
@@ -69,6 +72,7 @@ var home_sprite = {
 var droplet_sprite = {
     droplet: {
         animated: true,
+        loop: true,
         n_frames_x: 5,
         n_frames_y: 5,
         image: document.getElementById('droplet_sprite'),
@@ -77,6 +81,7 @@ var droplet_sprite = {
 var spider_sprite = {
     stay: {
         animated: true,
+        loop: false,
         n_frames_x: 5,
         n_frames_y: 4,
         image: document.getElementById('spider_stay_sprite'),
@@ -257,6 +262,7 @@ function Entity(options){
 
     this.dead = false;
     this.age = 0;
+    this.frame_i = 0;
 
     this.x = canvas.width / 2;
     this.y = canvas.height / 2;
@@ -313,6 +319,7 @@ update(Entity.prototype, {
     },
     step: function(){
         this.age++;
+        this.frame_i++;
 
         if(this.age % 3 === 0)this.trails.push({x:this.x, y:this.y});
         if(this.trails.length > this.max_n_trails)this.trails.shift();
@@ -403,7 +410,9 @@ update(Entity.prototype, {
         var frame_w = image.width / n_frames_x;
         var frame_h = image.height / n_frames_y;
 
-        var frame_i = this.age % n_frames;
+        var frame_i = spriteframe.loop?
+            this.frame_i % n_frames:
+            Math.min(this.frame_i, n_frames - 1);
         var frame_x = frame_i % n_frames_x;
         var frame_y = Math.floor(frame_i / n_frames_x);
 
@@ -805,25 +814,23 @@ function Daisy(options){
 update(Daisy.prototype, Entity.prototype);
 update(Daisy.prototype, {
     type: 'daisy',
+    get_n_frames: function(){
+        /* Returns number of frames in current animation frame */
+        var spriteframe = this.sprite[this.frame];
+        return spriteframe.n_frames_x * spriteframe.n_frames_y;
+    },
     step: function(){
         Entity.prototype.step.call(this);
 
-        /* Daisy's sprite is unique, in that it comes in 2 separate images...
-        So we have to do a weird thing to gets its animation to work properly
-        with our system. */
-        var spriteframe = this.sprite[this.frame];
-        var n_frames = spriteframe.n_frames_x * spriteframe.n_frames_y;
+        /* Daisy's sprite is unique, in that it comes in 2 separate image files...
+        So we have to do switch from one to the other in order to have the animation
+        work properly with our system. */
+        var n_frames = this.get_n_frames();
         if(this.frame === 'daisy1'){
             /* Once 'daisy1' animation is done, switch to 'daisy2' */
-            if(this.age >= n_frames){
-                this.age = 0;
+            if(this.frame_i >= n_frames){
+                this.frame_i = 0;
                 this.frame = 'daisy2';
-            }
-        }else if(this.frame === 'daisy2'){
-            /* Once 'daisy2' animation is done, pause forever on the last frame
-            (because the daisy has fully sprouted) */
-            if(this.age >= n_frames){
-                this.age = n_frames - 1;
             }
         }
     },
@@ -871,13 +878,11 @@ update(Spider.prototype, {
 
         //this is rate at which a spider action occurs
         var randMover = Math.round(Math.random()*240);
-        //console.log(randMover);
         if(randMover == 1){
             this.vy-=this.accel;
         }
         if(randMover == 2){
             this.vx+=this.accel;
-            //console.log("rand 2 triggered");
         }
         if(randMover == 3){
             this.vx-=this.accel;
@@ -886,7 +891,10 @@ update(Spider.prototype, {
             this.radius += 0.5;
             this.accel += 0.1;
         }
-        //this.vx-=this.accel
+        if(randMover >= 5 && randMover <= 6 && this.frame === 'stay'){
+            /* Replay the animation, spider rears back on its legs */
+            this.frame_i = 0;
+        }
 
     },
 });
