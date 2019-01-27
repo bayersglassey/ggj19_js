@@ -27,6 +27,7 @@ var backgrounds = [
     document.getElementById('background'),
     document.getElementById('background2'),
     document.getElementById('background3'),
+    document.getElementById('background4'),
 ];
 var background_i = 0;
 function cycle_background(){
