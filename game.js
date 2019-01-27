@@ -12,9 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 
 */
-
 'use strict';
-
 var delay = 30;
 var USE_BACKGROUND = true;
 
@@ -23,11 +21,7 @@ var canvas = document.getElementById('canvas');
 var bee_sprite = {
     crawl: document.getElementById('bee_left_sprite'),
     fly: document.getElementById('bee_sprite'),
-};
-var seed_sprite = {
-    unhatched: document.getElementById('seed_sprite'),
-    hatched: document.getElementById('seed_hatched_sprite'),
-};
+}
 
 var ground_height = 85;
 var ground_y = canvas.height - ground_height;
@@ -44,6 +38,7 @@ var KW = 87;
 var KA = 65;
 var KS = 83;
 var KD = 68;
+var KM = 77;
 var KSPACE = 32;
 var kdown = {};
 var mdown = false;
@@ -51,6 +46,35 @@ var mousex;
 var mousey;
 
 var tick = 0;
+
+var backgroundMusic = new sound("ClapClapSlap.wav" , "bMsc");
+var collideSound = new sound("BoopEffect.wav", "collideSnd");
+
+function sound(src , ident){
+    var muted = false;
+    this.sound = document.createElement("audio");
+    this.sound.src = src;
+    this.sound.id = ident;
+    this.sound.setAttribute("preload","auto");
+    this.sound.setAttribute("controls", "none");
+    this.sound.style.display = "none";
+    document.body.appendChild(this.sound);
+    this.play = function(){
+        this.sound.play();
+    }
+    this.stop = function(){
+        this.sound.pause();
+    }
+}
+function mute(){
+    if(document.getElementById("bMsc").muted == false){
+        document.getElementById("bMsc").muted = true;
+        document.getElementById("bMsc").stop();//may replace this with pause
+    }else{
+        document.getElementById("bMsc").muted = false;
+        document.getElementById("bMsc").play();
+    }
+}
 
 function update(obj1, obj2){
     for(var key in obj2){
@@ -237,8 +261,8 @@ update(Entity.prototype, {
             ctx.stroke();
         }
 
-        var DRAW_CIRCLE = !this.sprite; /* If no sprite provided, draw a circle */
-        //var DRAW_CIRCLE = true; /* For debugging, nice to see circle so you can tell when things will collide */
+        //var DRAW_CIRCLE = !this.sprite; /* If no sprite provided, draw a circle */
+        var DRAW_CIRCLE = true; /* For debugging, nice to see circle so you can tell when things will collide */
         if(DRAW_CIRCLE){
             ctx.strokeStyle = this.color;
             ctx.fillStyle = this.fillcolor;
@@ -451,8 +475,6 @@ function Seed(options){
     options.max_n_trails = 0;
     options.x = Math.random() * canvas.width;
     options.y = 0;
-    options.sprite = seed_sprite;
-    options.frame = 'unhatched';
     /* random velocity (vx, vy) so seeds are "scattered" from the sky
     on page load */
     options.vx = Math.random() * 20 - 10;
@@ -466,31 +488,31 @@ update(Seed.prototype, {
     step: function(){
         Entity.prototype.step.call(this);
 
-        if(this.frame === 'unhatched'){
-            /* If any droplets are touching the seed, it "sucks up" water
-            from the droplet, and grows. */
-            var collided_entities = this.get_collided_entities();
-            for(var i = 0; i < collided_entities.length; i++){
-                var other = collided_entities[i];
-                if(other.type !== 'droplet')continue;
+        /* If any droplets are touching the seed, it "sucks up" water
+        from the droplet, and grows. */
+        var collided_entities = this.get_collided_entities();
+        for(var i = 0; i < collided_entities.length; i++){
+            var other = collided_entities[i];
+            if(other.type !== 'droplet')continue;
 
-                /* Drain water from the droplet and add to seed's size */
-                this.radius += 1;
-                other.radius -= 2;
-                if(other.radius < 5){
-                    /* If the droplet gets small enough, remove it from game */
-                    other.die();
-                }
+            /* Drain water from the droplet and add to seed's size */
+            this.radius += 1;
+            other.radius -= 2;
+            if(other.radius < 5){
+                /* If the droplet gets small enough, remove it from game */
+                other.die();
             }
+        }
 
-            /* If seed sucks up enough water, it hatches a flower */
-            if(this.radius > this.max_radius){
-                this.frame = 'hatched';
+        /* If seed sucks up enough water, it's removed & replaced with
+        a flower */
+        if(this.radius > this.max_radius){
+            this.die();
 
-                /* Fling a new flower upwards from ground */
-                var new_vy = this.vy - 15;
-                new Flower({x:this.x, y:this.y, vy:new_vy});
-            }
+            /* Fling flower upwards from ground */
+            var new_vy = this.vy - 15;
+
+            new Flower({x:this.x, y:this.y, vy:new_vy});
         }
     },
 });
@@ -540,6 +562,12 @@ var fly = new Fly();
 for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
+backgroundMusic.play()
+//this loops the music
+document.getElementById("bMsc").addEventListener('ended', function(){
+    this.currentTime = 0;
+    this.play();
+}, false);
 
 function init(){
     $(document).on('keydown', keydown);
@@ -626,6 +654,7 @@ function keydown(event){
 
 function keyup(event){
     kdown[event.keyCode] = false;
+    if(event.keyCode === KM) mute();
 }
 
 function mousedown(event){
