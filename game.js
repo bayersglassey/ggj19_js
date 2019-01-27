@@ -17,6 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var DEBUG_RENDER = false;
+var SOUND_EFFECTS = false;
 
 var render_priority = ['home_bg', 'home', 'daisy', 'seed', 'flower', 'droplet', 'spider', 'bee'];
 
@@ -33,6 +34,23 @@ function cycle_background(){
     determined by the level */
     background_i++;
     if(background_i >= backgrounds.length)background_i = 0;
+}
+
+
+var music_urls = [
+    "/music/ClapClapSlap.wav",
+    "/music/BopHills.wav",
+    "/music/HallowWind.wav",
+    "/music/Shaker.wav",
+];
+var music_url_i = 0;
+function cycle_music(){
+    music_url_i++;
+    if(music_url_i >= music_urls.length)music_url_i = 0;
+
+    var music_url = music_urls[music_url_i];
+    console.log("Playing: " + music_url);
+    play_bg_music(music_url);
 }
 
 var bee_sprite = {
@@ -107,27 +125,36 @@ var KM = 77;
 var KB = 66;
 var KR = 82;
 var KN = 78;
+var KP = 80;
 var KSPACE = 32;
 var kdown = {};
 var mdown = false;
 var mousex;
 var mousey;
 
-var backgroundMusic = new sound("/music/ClapClapSlap.wav" , "bMsc", .5);
-var collideSound = new sound("/sounds/BoopEffect.wav", "collideSnd");
+var backgroundMusic = null;
+function play_bg_music(url){
+    if(backgroundMusic)backgroundMusic.stop();
+    backgroundMusic = new Sound(url, .5, true);
+    backgroundMusic.play();
+}
+play_bg_music(music_urls[0]);
+
+var collideSound = new Sound("/sounds/BoopEffect.wav");
 var throwSound = collideSound;
 
-function sound(src , ident, volume){
+function Sound(src, volume, loop){
     volume = volume || 1;
+    loop = loop || false;
 
     var muted = false;
     this.sound = document.createElement("audio");
     this.sound.src = src;
-    this.sound.id = ident;
     this.sound.setAttribute("preload","auto");
     this.sound.setAttribute("controls", "none");
     this.sound.style.display = "none";
     this.sound.volume = volume;
+    this.sound.loop = loop;
     document.body.appendChild(this.sound);
     this.play = function(){
         this.sound.play();
@@ -135,15 +162,8 @@ function sound(src , ident, volume){
     this.stop = function(){
         this.sound.pause();
     }
-}
-function mute(){
-    var bMsc = document.getElementById("bMsc");
-    if(bMsc.muted == false){
-        bMsc.muted = true;
-        //bMsc.stop();//may replace this with pause
-    }else{
-        bMsc.muted = false;
-        //bMsc.play();
+    this.mute = function(){
+        this.sound.muted = !this.sound.muted;
     }
 }
 
@@ -523,7 +543,7 @@ update(Bee.prototype, {
         if(kdown[KSPACE]){
             /* Drop everything we had picked up */
             this.grabbed_things = [];
-            throwSound.play();
+            if(SOUND_EFFECTS)throwSound.play();
 
             /* Wait 5 frames before picking stuff up again */
             this.grab_cooldown = 10;
@@ -583,7 +603,7 @@ update(Bee.prototype, {
 
                     /* Grab the thing! */
                     this.grabbed_things.push(other);
-                    collideSound.play();
+                    if(SOUND_EFFECTS)collideSound.play();
                     other.pick_up();
                 }else if(other.type === 'daisy' && other.frame === 'daisy2'){
                     /* Picking daisies gives you stamina... just like real life. */
@@ -1014,12 +1034,6 @@ function game_won(){
 
 
 
-backgroundMusic.play();
-//this loops the music
-document.getElementById("bMsc").addEventListener('ended', function(){
-    this.currentTime = 0;
-    this.play();
-}, false);
 
 init();
 function init(){
@@ -1130,7 +1144,8 @@ function keydown(event){
 }
 
 function keyup(event){
-    if(event.keyCode === KM) mute();
+    if(event.keyCode === KP) backgroundMusic.mute();
+    if(event.keyCode === KM) cycle_music();
     if(event.keyCode === KR) game_start();
     if(event.keyCode === KN){
         /* NOTE: shift+N is a cheat code to go to next level! */
