@@ -864,19 +864,12 @@ document.getElementById("bMsc").addEventListener('ended', function(){
 function init(){
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
-    //$(document).on('click', click);
-    $(document).on('mousedown',mousedown);
-    $(document).on('mouseup',mouseup);
-    $(document).on('mousemove',mousemove);
-    //$(document).on('mousemove',);
+    //$(canvas).on('click', click);
+    $(canvas).on('mousedown',mousedown);
+    $(canvas).on('mouseup',mouseup);
+    $(canvas).on('mousemove',mousemove);
 
-    // var intervalId;
-    // $(document).on('mousedown', function(event) {
-    //   intervalId = setInterval(click(event), 100);
-    // }).mouseup(function() {
-    //   clearInterval(intervalId);
-    //   //console.log('up');
-    // });
+    /* Start the main game loop */
     setInterval(step, delay);
 }
 
