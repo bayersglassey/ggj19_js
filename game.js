@@ -102,6 +102,29 @@ function mute(){
     }
 }
 
+
+function draw_message(msg1, msg2){
+    var ctx = canvas.getContext('2d');
+
+    var x = canvas.width / 2;
+    var y = canvas.height / 2;
+    var size = 60;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'black';
+    ctx.font = "bold " + size + "px Georgia";
+    ctx.fillText(msg1, x, y);
+
+    if(msg2){
+        size = 20;
+        y += size;
+
+        ctx.font = "bold " + size + "px Georgia";
+        ctx.fillText(msg2, x, y);
+    }
+}
+
+
 function update(obj1, obj2){
     for(var key in obj2){
         obj1[key] = obj2[key];
@@ -906,6 +929,10 @@ function render(){
     ctx.strokeRect(bar.x, bar.y, bar.w, bar.h); /* unfilled rectangle */
     ctx.fillStyle = 'red';
     ctx.fillRect(bar.x, bar.y, bar.w * ratio, bar.h); /* filled rectangle */
+
+    /* Render a message */
+    if(fly.dead)draw_message("YOU DED",
+        "Refresh your browser to try once more");
 }
 
 function keydown(event){
