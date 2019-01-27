@@ -47,6 +47,10 @@ var ground_height = 75;
 var ground_y = canvas.height - ground_height;
 
 var n_seeds = 10;
+var n_flowers_collected = 0;
+function game_won(){
+    return n_seeds === n_flowers_collected;
+}
 
 var n_spiders = 2;
 init();
@@ -664,6 +668,10 @@ update(Flower.prototype, {
         this.attached_to_base = false;
         this.gravity = .2;
     },
+    die: function(){
+        Entity.prototype.die.call(this);
+        n_flowers_collected++;
+    },
 });
 
 
@@ -931,7 +939,9 @@ function render(){
     ctx.fillRect(bar.x, bar.y, bar.w * ratio, bar.h); /* filled rectangle */
 
     /* Render a message */
-    if(fly.dead)draw_message("YOU DED",
+    if(game_won())draw_message("YOU WIN",
+        "you win you win you win you win");
+    else if(fly.dead)draw_message("YOU DED",
         "Refresh your browser to try once more");
 }
 
