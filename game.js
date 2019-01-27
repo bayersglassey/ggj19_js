@@ -808,6 +808,6 @@ function mouseup(event){
 }
 
 function mousemove(event){
-    mousex = event.pageX;
-    mousey = event.pageY;
+    mousex = event.offsetX;
+    mousey = event.offsetY;
 }
