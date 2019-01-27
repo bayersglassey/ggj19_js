@@ -26,6 +26,7 @@ var canvas = document.getElementById('canvas');
 var backgrounds = [
     document.getElementById('background'),
     document.getElementById('background2'),
+    document.getElementById('background3'),
 ];
 var background_i = 0;
 function cycle_background(){
