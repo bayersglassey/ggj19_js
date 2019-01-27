@@ -452,7 +452,7 @@ update(Entity.prototype, {
     }
 });
 
-function Fly(options){
+function Bee(options){
     /* Javascript class inheritance?? */
     options = options || {};
     options.radius = 10;
@@ -479,9 +479,9 @@ function Fly(options){
     this.grab_cooldown = 0;
     this.grabbed_things = [];
 }
-update(Fly.prototype, Entity.prototype);
-update(Fly.prototype, {
-    type: 'fly',
+update(Bee.prototype, Entity.prototype);
+update(Bee.prototype, {
+    type: 'bee',
     do_key_stuff: function(){
         Entity.prototype.do_key_stuff.call(this);
         if(kdown[KSPACE]){
@@ -772,9 +772,9 @@ update(Spider.prototype, {
         var collided_entities = this.get_collided_entities();
         for(var i = 0; i < collided_entities.length; i++) {
             var other = collided_entities[i];
-            if (other.type !== 'fly')continue;
+            if (other.type !== 'bee')continue;
 
-            //if spider eats fly then he gets bigger
+            //if spider eats bee then he gets bigger
             this.radius += 10;
 
             other.die();
@@ -881,7 +881,7 @@ update(Home.prototype, {
 var home_bg = new HomeBG();
 var home = new Home();
 home.reset_position();
-var fly = new Fly();
+var bee = new Bee();
 for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
@@ -923,7 +923,7 @@ function remove_dead_stuff(entities){
 function step(){
     tick++;
 
-    fly.do_key_stuff();
+    bee.do_key_stuff();
 
     /* Let entities do whatever it is they do each frame */
     for(var i = 0; i < entities.length; i++){
@@ -966,7 +966,7 @@ function render(){
         w: canvas.width - bar_padding_x * 2,
         h: bar_h,
     };
-    var ratio = fly.stamina / fly.max_stamina;
+    var ratio = bee.stamina / bee.max_stamina;
     ctx.strokeStyle = 'black';
     ctx.strokeRect(bar.x, bar.y, bar.w, bar.h); /* unfilled rectangle */
     ctx.fillStyle = 'red';
@@ -975,7 +975,7 @@ function render(){
     /* Render a message */
     if(game_won())draw_message("Congratulations",
         "Because your home flower is huge now.");
-    else if(fly.dead)draw_message("Eaten by a spider",
+    else if(bee.dead)draw_message("Eaten by a spider",
         "Reload the page to try again!");
 }
 
