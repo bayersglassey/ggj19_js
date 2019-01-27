@@ -19,6 +19,8 @@ var delay = 30;
 var USE_BACKGROUND = true;
 var DEBUG_RENDER = false;
 
+var render_priority = ['home_bg', 'home', 'spider', 'seed', 'flower', 'droplet', 'bee'];
+
 var canvas = document.getElementById('canvas');
 
 var backgrounds = [
@@ -218,8 +220,16 @@ function drawImageCenter(ctx, image, x, y, cx, cy, scale, rotation){
 }
 
 
+var n_entities_created = 0;
 var entities = [];
 function Entity(options){
+
+    /* Each entitity has a unique created_i value, just so that we can
+    sort them for rendering without a flicker bug...
+    ...anyway, it fixes a bug. */
+    this.created_i = n_entities_created;
+    n_entities_created++;
+
     this.trails = [];
     this.trail_ratio = .4; /* So like... if 1, trail will be unbroken. If 0, trail will be dots. */
     this.max_n_trails = 20;
@@ -949,6 +959,17 @@ function render(){
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+
+    /* Sort entities by render priority */
+    entities.sort(function(e1, e2){
+        var priority1 = render_priority.indexOf(e1.type);
+        var priority2 = render_priority.indexOf(e2.type);
+        if(priority1 === priority2){
+            return e1.created_i < e2.created_i? -1: 1;
+        }else{
+            return priority1 < priority2? -1: 1;
+        }
+    });
 
     /* Render entities */
     for(var i = 0; i < entities.length; i++){
