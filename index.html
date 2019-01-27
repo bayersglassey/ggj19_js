@@ -7,42 +7,61 @@
   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
   crossorigin="anonymous"
 ></script>
-<link rel="stylesheet" href="/css/tachyons.min.css">
+    <link rel="stylesheet" href="/css/tachyons.min.css">
 </head>
+<style>
+    body{
+        background-color: #020204;
+        color: #fff8f6;
+    }
+</style>
 <body>
 
 <h1 style="text-align: center">It's a bug</h1>
 
 <article >
     <div class="mw9 mw9-ns center pt4 flex">
+
+        <div style ="height:400px;width:250px;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif; overflow:auto";>
+            <h3 class="left flex">Controls:</h3>
+            <p>
+                Seeds on the ground can be watered to produce flowers.
+                <br>
+                Bring the flowers back to your home flower to make it grow.
+                <br>
+                Reload the page if you are unable to avoid the spiders.
+                <br>
+                ___________________
+                <br>
+                M to mute/unmute background music.
+                <br>
+                Arrow keys or WASD to move.
+                <br>
+                Grab objects by touching them.
+                <br>
+                Spacebar to drop them!
+            </p>
+        </div>
         <canvas class="center" id="canvas" width="800" height="400">Loading...</canvas>
+        <div style ="height:400px;width:250px;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif; overflow:auto";>
+            <h3 class="left flex">Credits:</h3>
+            <p>
+                Ben
+                <br>
+                Tom
+                <br>
+                Prestin
+                <br>
+                Hitomi
+                <br>
+                Riley
+            </p>
+        </div>
     </div>
 </article>
-
-
-
-<div class="mw9 mw9-ns center pt4 flex">
-    <h3 class="center  flex">Controls:</h3>
-    <div class="center">
-    <p>
-        M to mute/unmute background music.
-        <br>
-        Arrow keys or WASD to move.
-        <br>
-        Run into the rain drops.
-        <br>
-        Spacebar to drop them!
-        <br>
-        <br>
-        Seeds suck up rain drops and grow; once big enough, they bloom into flowers.
-        <br>
-        Bring the flowers back to your home flower to make it grow.
-        <br>
-        Don't get eaten by spiders!.. if you do, you'll have to reload the page, just like in real life.
-    </p>
-    <button onClick="location.reload()">Reload Page</button>
-    </div>
-</div>
+<button style ="font:20px/26px Georgia, Garamond, Serif;
+"class="mw9 mw9-ns center pt4 flex" value="Refresh Page" onClick="window.location.reload()">
+    Reload</button>
 
 <!-- Load sprite elements before the script, since it tries to
 find the sprites as soon as it loads -->
