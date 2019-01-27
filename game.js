@@ -28,6 +28,9 @@ var seed_sprite = {
     unhatched: document.getElementById('seed_sprite'),
     hatched: document.getElementById('seed_hatched_sprite'),
 };
+var flower_sprite = {
+    lily: document.getElementById('flower_lily_sprite'),
+};
 
 var ground_height = 85;
 var ground_y = canvas.height - ground_height;
@@ -536,6 +539,8 @@ function Flower(options){
     options.color = 'purple';
     options.fillcolor = 'lightsalmon';
     options.max_n_trails = 0;
+    options.sprite = flower_sprite;
+    options.frame = 'lily';
     Entity.call(this, options);
 
     /* The flower has a "base" from which it floats upwards...
