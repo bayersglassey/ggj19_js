@@ -44,6 +44,7 @@ var KW = 87;
 var KA = 65;
 var KS = 83;
 var KD = 68;
+var KM = 77;
 var KSPACE = 32;
 var kdown = {};
 var mdown = false;
@@ -51,6 +52,36 @@ var mousex;
 var mousey;
 
 var tick = 0;
+
+var backgroundMusic = new sound("/music/ClapClapSlap.wav" , "bMsc");
+var collideSound = new sound("/sounds/BoopEffect.wav", "collideSnd");
+
+function sound(src , ident){
+    var muted = false;
+    this.sound = document.createElement("audio");
+    this.sound.src = src;
+    this.sound.id = ident;
+    this.sound.setAttribute("preload","auto");
+    this.sound.setAttribute("controls", "none");
+    this.sound.style.display = "none";
+    document.body.appendChild(this.sound);
+    this.play = function(){
+        this.sound.play();
+    }
+    this.stop = function(){
+        this.sound.pause();
+    }
+}
+function mute(){
+    var bMsc = document.getElementById("bMsc");
+    if(bMsc.muted == false){
+        bMsc.muted = true;
+        //bMsc.stop();//may replace this with pause
+    }else{
+        bMsc.muted = false;
+        //bMsc.play();
+    }
+}
 
 function update(obj1, obj2){
     for(var key in obj2){
@@ -542,6 +573,13 @@ for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
 
+backgroundMusic.play()
+//this loops the music
+document.getElementById("bMsc").addEventListener('ended', function(){
+    this.currentTime = 0;
+    this.play();
+}, false);
+
 function init(){
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
@@ -629,6 +667,7 @@ function keydown(event){
 }
 
 function keyup(event){
+    if(event.keyCode === KM) mute();
     kdown[event.keyCode] = false;
 }
 
