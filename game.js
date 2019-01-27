@@ -111,7 +111,10 @@ var KS = 83;
 var KD = 68;
 var KM = 77;
 var KB = 66;
+var K1 = 49;
+var K2 = 50;
 var KSPACE = 32;
+var KENTER = 13;
 var kdown = {};
 var mdown = false;
 var mousex;
@@ -280,6 +283,8 @@ function Entity(options){
     this.fillcolor = 'lightgreen';
     this.trail_color = 'cyan';
 
+    this.keycodes = {};
+
     this.sprite = null;
     this.frame = 'fly';
         /* Should be a key of this.sprite (if this.sprite isn't null) */
@@ -302,10 +307,10 @@ update(Entity.prototype, {
         this.dead = true;
     },
     do_key_stuff: function(){
-        if(kdown[KUP]||kdown[KW])this.vy-=this.accel;
-        if(kdown[KDOWN]||kdown[KS])this.vy+=this.accel;
-        if(kdown[KLEFT]||kdown[KA])this.vx-=this.accel;
-        if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
+        if(kdown[this.keycodes.up])this.vy-=this.accel;
+        if(kdown[this.keycodes.down])this.vy+=this.accel;
+        if(kdown[this.keycodes.left])this.vx-=this.accel;
+        if(kdown[this.keycodes.right])this.vx+=this.accel;
 
         if(mdown){
             var distx = this.x - mousex;
@@ -524,7 +529,7 @@ update(Bee.prototype, {
     type: 'bee',
     do_key_stuff: function(){
         Entity.prototype.do_key_stuff.call(this);
-        if(kdown[KSPACE]){
+        if(kdown[this.keycodes.drop]){
             /* Drop everything we had picked up */
             this.grabbed_things = [];
             throwSound.play();
@@ -977,7 +982,16 @@ update(Home.prototype, {
 var home_bg = new HomeBG();
 var home = new Home();
 home.reset_position();
-var bee = new Bee();
+var bee = new Bee({
+    keycodes: {
+        up: KUP,
+        down: KDOWN,
+        left: KLEFT,
+        right: KRIGHT,
+        drop: KENTER,
+    },
+});
+var bee2 = null; /* player 2 not joined yet */
 for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
@@ -1020,11 +1034,11 @@ function remove_dead_stuff(entities){
 }
 
 function step(){
-    bee.do_key_stuff();
 
     /* Let entities do whatever it is they do each frame */
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
+        entity.do_key_stuff();
         entity.step();
     }
 
@@ -1093,8 +1107,20 @@ function keydown(event){
 }
 
 function keyup(event){
-    if(event.keyCode === KM) mute();
-    if(event.keyCode === KB) cycle_background();
+    var keycode = event.keyCode;
+    if(keycode === KM) mute();
+    if(keycode === KB) cycle_background();
+    if(keycode === K2 && !bee2){
+        bee2 = new Bee({
+            keycodes: {
+                up: KW,
+                down: KS,
+                left: KA,
+                right: KD,
+                drop: KSPACE,
+            },
+        });
+    }
     kdown[event.keyCode] = false;
 }
 
