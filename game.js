@@ -385,6 +385,10 @@ function Fly(options){
     options.color = 'orange';
     options.fillcolor = 'yellow';
     options.trail_color = 'yellow';
+    options.vy = -10;
+        /* You start off with some vertical velocity, so you don't
+        immediately run into a spider... */
+
     Entity.call(this, options);
 
     this.min_stamina = 15; /* Go below this, and you can no longer fly!.. */
@@ -688,7 +692,7 @@ update(Spider.prototype, {
         }
         if(randMover == 2){
             this.vx+=this.accel;
-            console.log("rand 2 triggered");
+            //console.log("rand 2 triggered");
         }
         if(randMover == 3){
             this.vx-=this.accel;
