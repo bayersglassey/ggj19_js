@@ -17,31 +17,47 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var USE_BACKGROUND = true;
-var ANIMATE_HOME = true;
+var DEBUG_RENDER = false;
 
-var background = document.getElementById('background');
 var canvas = document.getElementById('canvas');
+
+var backgrounds = [
+    document.getElementById('background'),
+    document.getElementById('background2'),
+];
+var background_i = 0;
+function cycle_background(){
+    background_i++;
+    if(background_i >= backgrounds.length)background_i = 0;
+}
+
 var bee_sprite = {
-    crawl: document.getElementById('bee_left_sprite'),
-    fly: document.getElementById('bee_sprite'),
+    crawl: {image: document.getElementById('bee_left_sprite')},
+    fly: {image: document.getElementById('bee_sprite')},
 };
 var seed_sprite = {
-    unhatched: document.getElementById('seed_sprite'),
-    hatched: document.getElementById('seed_hatched_sprite'),
+    unhatched: {image: document.getElementById('seed_sprite')},
+    hatched: {image: document.getElementById('seed_hatched_sprite')},
 };
 var flower_sprite = {
-    lily: document.getElementById('flower_lily_sprite'),
+    lily: {image: document.getElementById('flower_lily_sprite')},
 };
-var home_sprite;
-if(ANIMATE_HOME){
-    home_sprite = {
-        home: document.getElementById('home_animated_sprite'),
-    };
-}else{
-    home_sprite = {
-        home: document.getElementById('home_sprite'),
-    };
-}
+var home_sprite = {
+    home: {
+        animated: true,
+        n_frames_x: 5,
+        n_frames_y: 5,
+        image: document.getElementById('home_animated_sprite'),
+    },
+};
+var droplet_sprite = {
+    droplet: {
+        animated: true,
+        n_frames_x: 5,
+        n_frames_y: 5,
+        image: document.getElementById('droplet_sprite'),
+    },
+};
 
 var ground_height = 75;
 var ground_y = canvas.height - ground_height;
@@ -64,6 +80,7 @@ var KA = 65;
 var KS = 83;
 var KD = 68;
 var KM = 77;
+var KB = 66;
 var KSPACE = 32;
 var kdown = {};
 var mdown = false;
@@ -147,7 +164,7 @@ function get_orientation(x, y){
 
         So Math.atan(x) is between -90 degrees to +90 degrees
     */
-    var orientation = y === 0? 0: Math.atan(-y/x);
+    var orientation = x === 0? Math.PI/2: Math.atan(-y/x);
     if(x < 0)orientation += Math.PI;
     return orientation;
 }
@@ -218,6 +235,7 @@ function Entity(options){
     this.accel = .5;
     this.damp = .95;
     this.bounce = .5;
+    this.bounce_on_ground = true;
     this.radius = 10;
     this.gravity = 0;
     this.collide_with_map = true;
@@ -226,14 +244,10 @@ function Entity(options){
     this.trail_color = 'cyan';
 
     this.sprite = null;
-    /* If not null, sprite should be an object whose keys are frame names,
-    and whose values are <img> elements */
-
-    /* NOTE: if sprite_w, sprite_h are null, render() will use this.radius*2 instead */
-    this.sprite_w = null;
-    this.sprite_h = null;
-
-    this.frame = 'fly'; /* Should be a key of this.sprite (if used) */
+    this.frame = 'fly';
+        /* Should be a key of this.sprite (if this.sprite isn't null) */
+    this.sprite_radius_multiplier = 1;
+        /* In case sprite has extra space around the edge */
 
     /* Caller can override default attributes */
     update(this, options);
@@ -257,11 +271,13 @@ update(Entity.prototype, {
         if(kdown[KRIGHT]||kdown[KD])this.vx+=this.accel;
 
         if(mdown){
-          var distx = this.x - mousex;
-          var disty = this.y - mousey;
-          var dist = Math.sqrt(distx * distx + disty * disty);
-          this.vx-=this.accel * distx / dist;
-          this.vy-=this.accel * disty / dist;
+            var distx = this.x - mousex;
+            var disty = this.y - mousey;
+            var dist = Math.sqrt(distx * distx + disty * disty);
+            if(dist){
+                this.vx -= this.accel * distx / dist;
+                this.vy -= this.accel * disty / dist;
+            }
         };
     },
     step: function(){
@@ -294,7 +310,8 @@ update(Entity.prototype, {
                 this.vy *= -this.bounce;
             }else if(this.y >= map_b){
                 this.y = map_b - 1;
-                this.vy *= -this.bounce;
+                if(this.bounce_on_ground)this.vy *= -this.bounce;
+                else this.vy = 0;
             }
         }
 
@@ -305,9 +322,22 @@ update(Entity.prototype, {
         this.vy *= this.damp;
     },
     render: function(){
-        var ctx = canvas.getContext('2d');
+        this.render_trails();
 
-        /* Render trails */
+        if(!this.sprite || DEBUG_RENDER){
+            this.render_circle();
+        }
+        if(this.sprite){
+            var spriteframe = this.sprite[this.frame];
+            if(spriteframe.animated){
+                this.render_animated(spriteframe);
+            }else{
+                this.render_static(spriteframe);
+            }
+        }
+    },
+    render_trails: function(){
+        var ctx = canvas.getContext('2d');
         for(var i = 0; i < this.trails.length - 1; i++){
             var trail = this.trails[i];
             var next_trail = this.trails[i+1];
@@ -321,40 +351,61 @@ update(Entity.prototype, {
             ctx.lineTo(trail.x + addx, trail.y + addy);
             ctx.stroke();
         }
+    },
+    render_circle: function(){
+        var ctx = canvas.getContext('2d');
+        ctx.strokeStyle = this.color;
+        ctx.fillStyle = this.fillcolor;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+    },
+    render_animated: function(spriteframe){
+        var ctx = canvas.getContext('2d');
+        var image = spriteframe.image;
 
-        var DRAW_CIRCLE = !this.sprite; /* If no sprite provided, draw a circle */
-        //var DRAW_CIRCLE = true; /* For debugging, nice to see circle so you can tell when things will collide */
-        if(DRAW_CIRCLE){
-            ctx.strokeStyle = this.color;
-            ctx.fillStyle = this.fillcolor;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.stroke();
-        }
+        var n_frames_x = spriteframe.n_frames_x;
+        var n_frames_y = spriteframe.n_frames_y;
+        var n_frames = n_frames_x * n_frames_y;
 
-        if(this.sprite){
-            /* Render sprite, if provided */
+        var frame_w = image.width / n_frames_x;
+        var frame_h = image.height / n_frames_y;
 
-            var image = this.sprite[this.frame];
-            var w = this.sprite_w? this.sprite_w: this.radius * 2;
-            var h = this.sprite_h? this.sprite_h: this.radius * 2;
+        var frame_i = tick % n_frames;
+        var frame_x = frame_i % n_frames_x;
+        var frame_y = Math.floor(frame_i / n_frames_y);
 
-            var OLDSCHOOL = true;
-            if(OLDSCHOOL){
-                /* How we used to do it before copy-pasting magic stuff
-                off StackOverflow */
-                var dx = this.x - w / 2;
-                var dy = this.y - h / 2;
-                ctx.drawImage(image, dx, dy, w, h);
-            }else{
-                /* Now we are all pros */
-                var dx = this.x;
-                var dy = this.y;
-                var scale = w / image.width;
-                var rot = to_degrees(this.orientation);
-                drawImage(ctx, image, dx, dy, scale, rot);
-            }
+        var w = (this.radius * this.sprite_radius_multiplier) * 2;
+        var h = (this.radius * this.sprite_radius_multiplier) * 2;
+        var dx = this.x - w / 2;
+        var dy = this.y - h / 2;
+
+        ctx.drawImage(image,
+            frame_x*frame_w, frame_y*frame_h, frame_w, frame_h,
+            dx, dy, w, h);
+    },
+    render_static: function(spriteframe){
+        var ctx = canvas.getContext('2d');
+        var image = spriteframe.image;
+
+        var w = (this.radius * this.sprite_radius_multiplier) * 2;
+        var h = (this.radius * this.sprite_radius_multiplier) * 2;
+
+        var OLDSCHOOL = true;
+        if(OLDSCHOOL){
+            /* How we used to do it before copy-pasting magic stuff
+            off StackOverflow */
+            var dx = this.x - w / 2;
+            var dy = this.y - h / 2;
+            ctx.drawImage(image, dx, dy, w, h);
+        }else{
+            /* Now we are all pros */
+            var dx = this.x;
+            var dy = this.y;
+            var scale = w / image.width;
+            var rot = to_degrees(this.orientation);
+            drawImage(ctx, image, dx, dy, scale, rot);
         }
     },
     distance_xy: function(x, y){
@@ -406,9 +457,9 @@ function Fly(options){
     options = options || {};
     options.radius = 10;
     options.accel = .85;
+    options.bounce_on_ground = false;
     options.sprite = bee_sprite;
-    options.sprite_w = (options.radius + 20) * 2;
-    options.sprite_h = (options.radius + 20) * 2;
+    options.sprite_radius_multiplier = 2;
     options.color = 'orange';
     options.fillcolor = 'yellow';
     options.trail_color = 'yellow';
@@ -439,7 +490,7 @@ update(Fly.prototype, {
             throwSound.play();
 
             /* Wait 5 frames before picking stuff up again */
-            this.grab_cooldown = 5;
+            this.grab_cooldown = 10;
         }
     },
     step: function(){
@@ -481,7 +532,11 @@ update(Fly.prototype, {
             var collided_entities = this.get_collided_entities();
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
-                if(other.type !== 'droplet' && other.type !== 'flower')continue;
+                if(!(
+                    other.type === 'droplet' ||
+                    other.type === 'flower'
+                    //(other.type === 'seed' && other.frame === 'hatched')
+                ))continue;
                 if(this.grabbed_things.indexOf(other) >= 0)continue;
 
                 /* Grab the thing! */
@@ -509,6 +564,9 @@ function Droplet(options){
     options.fillcolor = 'rgba(128, 128, 255, .4)';
     options.trail_color = 'lightblue';
     options.max_n_trails = 5;
+    options.sprite = droplet_sprite;
+    options.frame = 'droplet';
+    options.sprite_radius_multiplier = 1.3;
     Entity.call(this, options);
 
     this.attached_to_home = true;
@@ -537,7 +595,8 @@ update(Droplet.prototype, {
 
         /* Droplets start off attached to the Home flower */
         if(this.attached_to_home){
-            this.spring(home, this.home_springiness, this.home_spring_min_distance);
+            this.spring(home, this.home_springiness,
+                this.home_spring_min_distance);
         }
 
         if(this.is_popping()){
@@ -610,10 +669,16 @@ update(Seed.prototype, {
             /* If seed sucks up enough water, it hatches a flower */
             if(this.radius > this.max_radius){
                 this.frame = 'hatched';
+                this.gravity = .2;
+                this.radius *= .8;
 
                 /* Fling a new flower upwards from ground */
-                var new_vy = this.vy - 15;
-                new Flower({x:this.x, y:this.y, vy:new_vy});
+                new Flower({
+                    x: this.x,
+                    y: this.y,
+                    vy: this.vy - 15,
+                    base: this,
+                });
             }
         }
     },
@@ -624,7 +689,7 @@ function Flower(options){
     /* Javascript class inheritance?? */
     options = options || {};
     options.damp = .99;
-    options.gravity = -.3;
+    options.gravity = -.5;
     options.color = 'purple';
     options.fillcolor = 'lightsalmon';
     options.max_n_trails = 0;
@@ -634,11 +699,11 @@ function Flower(options){
 
     /* The flower has a "base" from which it floats upwards...
     It's connected to the base with springy physics.
-    When bee picks up a flower, it gets detached from its "base" */
+    When bee picks up a flower, it gets detached from its "base".
+    The base is presumably the seed the flower sprouted from... */
     this.attached_to_base = true;
-    this.base_x = this.x;
-    this.base_y = this.y;
-    this.base_springiness = .0001;
+    this.base_springiness = .0002;
+    this.base_spring_min_distance = 30;
 
     /* When flowers are created, they "pop" into existence */
     this.radius = 5;
@@ -657,8 +722,9 @@ update(Flower.prototype, {
 
         if(this.attached_to_base){
             /* Flowers float upwards (gravity < 0) but are tethered to
-            a "base" position with springy physics */
-            this.spring_xy(this.base_x, this.base_y, this.base_springiness);
+            a "base" entity with springy physics */
+            this.spring(this.base, this.base_springiness,
+                this.base_spring_min_distance);
         }
     },
     pick_up: function(){
@@ -756,33 +822,6 @@ function HomeBG(options){
 update(HomeBG.prototype, Entity.prototype);
 update(HomeBG.prototype, {
     type: 'home_bg',
-    render: function(){
-        if(!ANIMATE_HOME)return Entity.prototype.render.call(this);
-
-        var ctx = canvas.getContext('2d');
-
-        var image = this.sprite[this.frame];
-
-        var n_frames_x = 5;
-        var n_frames_y = 5;
-        var n_frames = n_frames_x * n_frames_y;
-
-        var frame_w = image.width / n_frames_x;
-        var frame_h = image.height / n_frames_y;
-
-        var frame_i = tick % n_frames;
-        var frame_x = frame_i % n_frames_x;
-        var frame_y = Math.floor(frame_i / n_frames_y);
-
-        var w = this.sprite_w? this.sprite_w: this.radius * 2;
-        var h = this.sprite_h? this.sprite_h: this.radius * 2;
-        var dx = this.x - w / 2;
-        var dy = this.y - h / 2;
-
-        ctx.drawImage(image,
-            frame_x*frame_w, frame_y*frame_h, frame_w, frame_h,
-            dx, dy, w, h);
-    },
 });
 
 
@@ -805,6 +844,16 @@ update(Home.prototype, {
     type: 'home',
     step: function(){
         Entity.prototype.step.call(this);
+
+        /* Periodically create new Droplets */
+        if(tick % 25 === 0){
+            new Droplet({
+                x: this.x,
+                y: this.y,
+                vx: Math.random() * 20 - 10,
+                vy: Math.random() * 20 - 20,
+            });
+        }
 
         /* When flowers are delivered to the Home, they disappear
         and it grows... */
@@ -849,19 +898,12 @@ document.getElementById("bMsc").addEventListener('ended', function(){
 function init(){
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
-    //$(document).on('click', click);
-    $(document).on('mousedown',mousedown);
-    $(document).on('mouseup',mouseup);
-    $(document).on('mousemove',mousemove);
-    //$(document).on('mousemove',);
+    //$(canvas).on('click', click);
+    $(canvas).on('mousedown',mousedown);
+    $(canvas).on('mouseup',mouseup);
+    $(canvas).on('mousemove',mousemove);
 
-    // var intervalId;
-    // $(document).on('mousedown', function(event) {
-    //   intervalId = setInterval(click(event), 100);
-    // }).mouseup(function() {
-    //   clearInterval(intervalId);
-    //   //console.log('up');
-    // });
+    /* Start the main game loop */
     setInterval(step, delay);
 }
 
@@ -883,15 +925,6 @@ function step(){
 
     fly.do_key_stuff();
 
-    if(tick % 25 === 0){
-        new Droplet({
-            x: home.x,
-            y: home.y,
-            vx: Math.random() * 20 - 10,
-            vy: Math.random() * 20 - 20,
-        });
-    }
-
     /* Let entities do whatever it is they do each frame */
     for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
@@ -909,6 +942,7 @@ function render(){
     var ctx = canvas.getContext('2d');
 
     if(USE_BACKGROUND){
+        var background = backgrounds[background_i];
         ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
     }else{
         /* Old school... just clear the screen to white */
@@ -939,10 +973,10 @@ function render(){
     ctx.fillRect(bar.x, bar.y, bar.w * ratio, bar.h); /* filled rectangle */
 
     /* Render a message */
-    if(game_won())draw_message("YOU WIN",
-        "you win you win you win you win");
-    else if(fly.dead)draw_message("YOU DED",
-        "Refresh your browser to try once more");
+    if(game_won())draw_message("Congratulations",
+        "Because your home flower is huge now.");
+    else if(fly.dead)draw_message("Eaten by a spider",
+        "Reload the page to try again!");
 }
 
 function keydown(event){
@@ -952,6 +986,7 @@ function keydown(event){
 
 function keyup(event){
     if(event.keyCode === KM) mute();
+    if(event.keyCode === KB) cycle_background();
     kdown[event.keyCode] = false;
 }
 
