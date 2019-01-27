@@ -8,10 +8,30 @@
   crossorigin="anonymous"
 ></script>
 <link rel="stylesheet" href="/css/tachyons.min.css">
+<style>
+    .rain-drop {
+        font-weight: bold;
+        color: #8080ff;
+    }
+    .seed {
+        font-weight: bold;
+        color: #804000;
+    }
+    .flower {
+        font-weight: bold;
+        color: #aa80aa;
+    }
+    .home-flower {
+        font-weight: bold;
+        color: #ff0040;
+    }
+    .spider {
+        font-weight: bold;
+        color: #000000;
+    }
+</style>
 </head>
 <body>
-
-<h1 style="text-align: center">It's a bug</h1>
 
 <article >
     <div class="mw9 mw9-ns center pt4 flex">
@@ -21,24 +41,25 @@
 
 
 
-<div class="mw9 mw9-ns center pt4 flex">
-    <h3 class="center  flex">Controls:</h3>
+<h2 style="text-align: center; margin-bottom: 0;">It's a bug</h2>
+<div class="mw9 mw9-ns center pt4 flex" style="padding-top: 0;">
+    <h3 style="text-align: center">Controls:</h3>
     <div class="center">
     <p>
         M to mute/unmute background music.
         <br>
-        Arrow keys or WASD to move.
+        Arrow keys or WASD to move. Touch things to pick them up, Spacebar to drop them.
         <br>
-        Run into the rain drops.
+        You are this bee: <img src="/img/bee.png" width=30 height=30>
         <br>
-        Spacebar to drop them!
+        Deliver the <span class="rain-drop">rain drops</span> to the <span class="seed">Seeds</span>!
         <br>
+        Once a <span class="seed">seed</span> grows big enough, it blooms into a <span class="flower">flower</span>.
         <br>
-        Seeds suck up rain drops and grow; once big enough, they bloom into flowers.
+        Bring the <span class="flower">flowers</span> back to your <span class="home-flower">home flower</span> to make it grow.
         <br>
-        Bring the flowers back to your home flower to make it grow.
-        <br>
-        Don't get eaten by spiders!.. if you do, you'll have to reload the page, just like in real life.
+        Don't get eaten by <span class="spider">spiders</span>!..
+        if you do, you'll have to reload the page, just like in real life.
     </p>
     <button onClick="location.reload()">Reload Page</button>
     </div>
