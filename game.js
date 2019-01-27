@@ -19,8 +19,17 @@ var delay = 30;
 var USE_BACKGROUND = true;
 var DEBUG_RENDER = false;
 
-var background = document.getElementById('background2');
 var canvas = document.getElementById('canvas');
+
+var backgrounds = [
+    document.getElementById('background'),
+    document.getElementById('background2'),
+];
+var background_i = 0;
+function cycle_background(){
+    background_i++;
+    if(background_i >= backgrounds.length)background_i = 0;
+}
 
 var bee_sprite = {
     crawl: {image: document.getElementById('bee_left_sprite')},
@@ -71,6 +80,7 @@ var KA = 65;
 var KS = 83;
 var KD = 68;
 var KM = 77;
+var KB = 66;
 var KSPACE = 32;
 var kdown = {};
 var mdown = false;
@@ -917,6 +927,7 @@ function render(){
     var ctx = canvas.getContext('2d');
 
     if(USE_BACKGROUND){
+        var background = backgrounds[background_i];
         ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
     }else{
         /* Old school... just clear the screen to white */
@@ -960,6 +971,7 @@ function keydown(event){
 
 function keyup(event){
     if(event.keyCode === KM) mute();
+    if(event.keyCode === KB) cycle_background();
     kdown[event.keyCode] = false;
 }
 
