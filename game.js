@@ -218,6 +218,7 @@ function Entity(options){
     this.accel = .5;
     this.damp = .95;
     this.bounce = .5;
+    this.bounce_on_ground = true;
     this.radius = 10;
     this.gravity = 0;
     this.collide_with_map = true;
@@ -294,7 +295,8 @@ update(Entity.prototype, {
                 this.vy *= -this.bounce;
             }else if(this.y >= map_b){
                 this.y = map_b - 1;
-                this.vy *= -this.bounce;
+                if(this.bounce_on_ground)this.vy *= -this.bounce;
+                else this.vy = 0;
             }
         }
 
@@ -406,6 +408,7 @@ function Fly(options){
     options = options || {};
     options.radius = 10;
     options.accel = .85;
+    options.bounce_on_ground = false;
     options.sprite = bee_sprite;
     options.sprite_w = (options.radius + 20) * 2;
     options.sprite_h = (options.radius + 20) * 2;
