@@ -17,7 +17,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 var delay = 30;
 var USE_BACKGROUND = true;
-var ANIMATE_HOME = true;
 
 var background = document.getElementById('background');
 var canvas = document.getElementById('canvas');
@@ -32,21 +31,13 @@ var seed_sprite = {
 var flower_sprite = {
     lily: document.getElementById('flower_lily_sprite'),
 };
-var home_sprite;
-if(ANIMATE_HOME){
-    home_sprite = {
-        home: document.getElementById('home_animated_sprite'),
-    };
-}else{
-    home_sprite = {
-        home: document.getElementById('home_sprite'),
-    };
-}
 
 var ground_height = 85;
 var ground_y = canvas.height - ground_height;
 
 var n_seeds = 10;
+
+var n_spiders = 2;
 
 init();
 
@@ -342,27 +333,19 @@ update(Entity.prototype, {
         }
         return collided_entities;
     },
-    spring_xy: function(x, y, springiness, min_distance){
+    spring_xy: function(x, y, springiness){
         /* Changes our velocity so it's like we're connected to
         (x, y) by a spring... */
-        min_distance = min_distance || 0;
         var distance = this.distance_xy(x,y);
-        if(distance >= min_distance){
-            var mul = distance * springiness;
-            var addx = (x - this.x) * mul;
-            var addy = (y - this.y) * mul;
-            this.vx += addx;
-            this.vy += addy;
-        }
+        var mul = distance * springiness;
+        var addx = (x - this.x) * mul;
+        var addy = (y - this.y) * mul;
+        this.vx += addx;
+        this.vy += addy;
     },
-    spring: function(other, springiness, min_distance){
-        this.spring_xy(other.x, other.y, springiness, min_distance);
+    spring: function(other, springiness){
+        this.spring_xy(other.x, other.y, springiness);
     },
-    pick_up: function(){
-        /* Nothing happens by default when player picks something up,
-        but "subclasses" of Entity can override this function to do
-        something special */
-    }
 });
 
 function Fly(options){
@@ -371,8 +354,8 @@ function Fly(options){
     options.radius = 10;
     options.accel = .85;
     options.sprite = bee_sprite;
-    options.sprite_w = (options.radius + 20) * 2;
-    options.sprite_h = (options.radius + 20) * 2;
+    options.sprite_w = 50;
+    options.sprite_h = 50;
     options.color = 'orange';
     options.fillcolor = 'yellow';
     options.trail_color = 'yellow';
@@ -403,8 +386,6 @@ update(Fly.prototype, {
         }
     },
     step: function(){
-
-        remove_dead_stuff(this.grabbed_things);
 
         if(this.vx){
             //rotates w motion
@@ -437,17 +418,16 @@ update(Fly.prototype, {
         if(this.grab_cooldown > 0){
             this.grab_cooldown--;
         }else{
-            /* Pick up any droplets or hatched flowers we touch */
+            /* Pick up any droplets we touch */
             var collided_entities = this.get_collided_entities();
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
-                if(other.type !== 'droplet' && other.type !== 'flower')continue;
+                if(other.type !== 'droplet')continue;
                 if(this.grabbed_things.indexOf(other) >= 0)continue;
 
                 /* Grab the thing! */
                 this.grabbed_things.push(other);
                 collideSound.play();
-                other.pick_up();
             }
         }
 
@@ -464,16 +444,14 @@ function Droplet(options){
     /* Javascript class inheritance?? */
     options = options || {};
     options.damp = .985;
-    options.gravity = 0;
+    options.gravity = .3;
     options.color = 'rgba(0, 0, 255, .8)';
     options.fillcolor = 'rgba(128, 128, 255, .4)';
-    options.trail_color = 'lightblue';
+    options.trail_color = 'lightgrey';
     options.max_n_trails = 5;
+    options.x = Math.random() * canvas.width;
+    options.y = 0;
     Entity.call(this, options);
-
-    this.attached_to_home = true;
-    this.home_spring_min_distance = 40;
-    this.home_springiness = .0003;
 
     /* Radius starts at start_radius, grows by add_radius_normal pixels
     per frame, once it hits pop_after_radius it grows by add_radius_popping
@@ -481,7 +459,7 @@ function Droplet(options){
     removed from game) */
     this.start_radius = 10;
     this.radius = this.start_radius;
-    this.add_radius_normal = .04;
+    this.add_radius_normal = .02;
     this.add_radius_popping = 3;
     this.pop_after_radius = 20;
     this.die_after_radius = 50;
@@ -489,18 +467,9 @@ function Droplet(options){
 update(Droplet.prototype, Entity.prototype);
 update(Droplet.prototype, {
     type: 'droplet',
-    is_popping: function(){
-        return this.radius >= this.pop_after_radius;
-    },
     step: function(){
         Entity.prototype.step.call(this);
-
-        /* Droplets start off attached to the Home flower */
-        if(this.attached_to_home){
-            this.spring(home, this.home_springiness, this.home_spring_min_distance);
-        }
-
-        if(this.is_popping()){
+        if(this.radius >= this.pop_after_radius){
             /* Old droplets "pop" by quickly expanding, then disappearing */
             this.radius += this.add_radius_popping;
             if(this.radius > this.die_after_radius){
@@ -510,13 +479,6 @@ update(Droplet.prototype, {
             /* Droplets slowly expand to give you an idea of their age */
             this.radius += this.add_radius_normal;
         }
-    },
-    pick_up: function(){
-        Entity.prototype.pick_up.call(this);
-
-        /* Picking a droplet detaches it from the home flower */
-        this.attached_to_home = false;
-        this.gravity = .3;
     },
 });
 
@@ -556,7 +518,6 @@ update(Seed.prototype, {
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
                 if(other.type !== 'droplet')continue;
-                if(other.is_popping())continue;
 
                 /* Drain water from the droplet and add to seed's size */
                 this.radius += 1;
@@ -584,7 +545,7 @@ function Flower(options){
     /* Javascript class inheritance?? */
     options = options || {};
     options.damp = .99;
-    options.gravity = -.3;
+    options.gravity = -.1;
     options.color = 'purple';
     options.fillcolor = 'lightsalmon';
     options.max_n_trails = 0;
@@ -593,9 +554,7 @@ function Flower(options){
     Entity.call(this, options);
 
     /* The flower has a "base" from which it floats upwards...
-    It's connected to the base with springy physics.
-    When bee picks up a flower, it gets detached from its "base" */
-    this.attached_to_base = true;
+    It's connected to the base with springy physics */
     this.base_x = this.x;
     this.base_y = this.y;
     this.base_springiness = .0001;
@@ -615,121 +574,83 @@ update(Flower.prototype, {
         this.radius += this.add_radius;
         if(this.radius > this.max_radius)this.radius = this.max_radius;
 
-        if(this.attached_to_base){
-            /* Flowers float upwards (gravity < 0) but are tethered to
-            a "base" position with springy physics */
-            this.spring_xy(this.base_x, this.base_y, this.base_springiness);
-        }
-    },
-    pick_up: function(){
-        Entity.prototype.pick_up.call(this);
-
-        /* Picking a flower detaches it from its base */
-        this.attached_to_base = false;
-        this.gravity = .2;
+        /* Flowers float upwards (gravity < 0) but are tethered to
+        a "base" position with springy physics */
+        this.spring_xy(this.base_x, this.base_y, this.base_springiness);
     },
 });
 
 
-
-/* HomeBG is the big thing which looks like a flower.
-It doesn't do anything except look pretty. */
-function HomeBG(options){
+function Spider(options){
     /* Javascript class inheritance?? */
     options = options || {};
-    options.gravity = 0;
-    options.radius = 150;
-    options.color = 'grey';
-    options.fillcolor = 'white';
+    options.accel = 3;
+    options.radius = 25;
+    options.max_radius = 60;
+    options.damp = .99;
+    options.gravity = .1;
+    options.color = 'red';
+    options.fillcolor = 'black';
     options.max_n_trails = 0;
-    options.sprite = home_sprite;
-    options.frame = 'home';
+    options.x = Math.random() * canvas.width;
+    options.y = 1000;
+    //options.sprite = seed_sprite;
+    //options.frame = 'unhatched';
+    /* random velocity (vx, vy) so seeds are "scattered" from the sky
+     on page load */
+    options.vx = Math.random() * 20 - 10;
+    //options.vy = Math.random() * 10 - 5;
+
     Entity.call(this, options);
 }
-update(HomeBG.prototype, Entity.prototype);
-update(HomeBG.prototype, {
-    type: 'home_bg',
-    render: function(){
-        if(!ANIMATE_HOME)return Entity.prototype.render.call(this);
-
-        var ctx = canvas.getContext('2d');
-
-        var image = this.sprite[this.frame];
-
-        var n_frames_x = 5;
-        var n_frames_y = 5;
-        var n_frames = n_frames_x * n_frames_y;
-
-        var frame_w = image.width / n_frames_x;
-        var frame_h = image.height / n_frames_y;
-
-        var frame_i = tick % n_frames;
-        var frame_x = frame_i % n_frames_x;
-        var frame_y = Math.floor(frame_i / n_frames_y);
-
-        var w = this.sprite_w? this.sprite_w: this.radius * 2;
-        var h = this.sprite_h? this.sprite_h: this.radius * 2;
-        var dx = this.x - w / 2;
-        var dy = this.y - h / 2;
-
-        ctx.drawImage(image,
-            frame_x*frame_w, frame_y*frame_h, frame_w, frame_h,
-            dx, dy, w, h);
-    },
-});
-
-
-
-/* Home is an invisible thing sitting near the top of the HomeBG
-thing (which has the flower image).
-Home sprays droplets, and you bring hatched flowers back to it. */
-function Home(options){
-    /* Javascript class inheritance?? */
-    options = options || {};
-    options.gravity = 0;
-    options.radius = 30;
-    options.color = 'transparent';
-    options.fillcolor = 'transparent';
-    options.max_n_trails = 0;
-    Entity.call(this, options);
-}
-update(Home.prototype, Entity.prototype);
-update(Home.prototype, {
-    type: 'home',
+update(Spider.prototype, Entity.prototype);
+update(Spider.prototype, {
+    type: 'spider',
     step: function(){
         Entity.prototype.step.call(this);
 
-        /* When flowers are delivered to the Home, they disappear
-        and it grows... */
         var collided_entities = this.get_collided_entities();
-        for(var i = 0; i < collided_entities.length; i++){
+        for(var i = 0; i < collided_entities.length; i++) {
             var other = collided_entities[i];
-            if(other.type !== 'flower')continue;
+            if (other.type !== 'fly')continue;
 
-            other.die(); /* I feel slightly guilty for telling a flower to "die"... */
-            home_bg.radius += 15;
-            this.reset_position();
+            //if spider eats fly then he gets bigger
+            this.radius += 10;
+
+            other.die();
+            //may want to reload or generate button to restart
         }
-    },
-    reset_position: function(){
-        /* As home_bg grows in size, you can call this function to make
-        sure home stays in the middle of home_bg's flower image */
-        this.x = home_bg.x;
-        this.y = home_bg.y - 60 * home_bg.radius/100;
+
+        //this is rate at which a spider action occurs
+        var randMover = Math.round(Math.random()*240);
+        //console.log(randMover);
+        if(randMover == 1){
+            this.vy-=this.accel;
+        }
+        if(randMover == 2){
+            this.vx+=this.accel;
+            console.log("rand 2 triggered");
+        }
+        if(randMover == 3){
+            this.vx-=this.accel;
+        }
+        if(randMover == 4){
+            this.radius += 0.5;
+            this.accel += 0.1;
+        }
+        //this.vx-=this.accel
+
     },
 });
 
-
-
 /* Create some entities at start of game... */
-var home_bg = new HomeBG();
-var home = new Home();
-home.reset_position();
 var fly = new Fly();
 for(var i = 0; i < n_seeds; i++){
     new Seed();
 }
-
+for(var i = 0; i < n_spiders; i++){
+    new Spider();
+}
 backgroundMusic.play();
 //this loops the music
 document.getElementById("bMsc").addEventListener('ended', function(){
@@ -756,8 +677,20 @@ function init(){
     setInterval(step, delay);
 }
 
-function remove_dead_stuff(entities){
-    /* Removes "dead" entities from an array */
+function step(){
+    tick++;
+
+    fly.do_key_stuff();
+
+    if(tick % 25 === 0)new Droplet();
+
+    /* Let entities do whatever it is they do each frame */
+    for(var i = 0; i < entities.length; i++){
+        var entity = entities[i];
+        entity.step();
+    }
+
+    /* Remove "dead" entities */
     for(var i = 0; i < entities.length;){
         var entity = entities[i];
         if(entity.dead){
@@ -767,30 +700,6 @@ function remove_dead_stuff(entities){
             i++;
         }
     }
-}
-
-function step(){
-    tick++;
-
-    fly.do_key_stuff();
-
-    if(tick % 25 === 0){
-        new Droplet({
-            x: home.x,
-            y: home.y,
-            vx: Math.random() * 20 - 10,
-            vy: Math.random() * 20 - 20,
-        });
-    }
-
-    /* Let entities do whatever it is they do each frame */
-    for(var i = 0; i < entities.length; i++){
-        var entity = entities[i];
-        entity.step();
-    }
-
-    /* Remove "dead" entities */
-    remove_dead_stuff(entities);
 
     /* Render the world */
     render();
@@ -849,6 +758,6 @@ function mouseup(event){
 }
 
 function mousemove(event){
-    mousex = event.offsetX;
-    mousey = event.offsetY;
+    mousex = event.pageX;
+    mousey = event.pageY;
 }
