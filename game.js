@@ -74,6 +74,14 @@ var droplet_sprite = {
         image: document.getElementById('droplet_sprite'),
     },
 };
+var spider_sprite = {
+    stay: {
+        animated: true,
+        n_frames_x: 5,
+        n_frames_y: 4,
+        image: document.getElementById('spider_stay_sprite'),
+    },
+};
 
 var ground_height = 75;
 var ground_y = canvas.height - ground_height;
@@ -478,7 +486,7 @@ update(Entity.prototype, {
 function Bee(options){
     /* Javascript class inheritance?? */
     options = options || {};
-    options.radius = 10;
+    options.radius = 13;
     options.accel = .85;
     options.bounce_on_ground = false;
     options.sprite = bee_sprite;
@@ -615,11 +623,11 @@ function Droplet(options){
     per frame, once it hits pop_after_radius it grows by add_radius_popping
     pixels per frame, once it hits die_after_radius the droplet "dies" (is
     removed from game) */
-    this.start_radius = 10;
+    this.start_radius = 13;
     this.radius = this.start_radius;
     this.add_radius_normal = .04;
     this.add_radius_popping = 3;
-    this.pop_after_radius = 20;
+    this.pop_after_radius = 25;
     this.die_after_radius = 50;
 }
 update(Droplet.prototype, Entity.prototype);
@@ -672,6 +680,7 @@ function Seed(options){
     options.x = Math.random() * canvas.width;
     options.y = 0;
     options.sprite = seed_sprite;
+    options.sprite_radius_multiplier = 1.25;
     options.frame = 'unhatched';
     /* random velocity (vx, vy) so seeds are "scattered" from the sky
     on page load */
@@ -782,11 +791,12 @@ update(Flower.prototype, {
 function Daisy(options){
     /* Javascript class inheritance?? */
     options = options || {};
-    options.radius = 30;
+    options.radius = 25;
     options.color = 'purple';
     options.fillcolor = 'lightsalmon';
     options.max_n_trails = 0;
     options.sprite = daisy_sprite;
+    options.sprite_radius_multiplier = 1.5;
     options.frame = 'daisy1';
     options.x = Math.random() * canvas.width;
     options.y = ground_y;
@@ -832,11 +842,10 @@ function Spider(options){
     options.fillcolor = 'black';
     options.max_n_trails = 0;
     options.x = Math.random() * canvas.width;
-    options.y = 1000;
-    //options.sprite = seed_sprite;
-    //options.frame = 'unhatched';
-    /* random velocity (vx, vy) so seeds are "scattered" from the sky
-     on page load */
+    options.y = ground_y;
+    options.sprite = spider_sprite;
+    options.sprite_radius_multiplier = 1.3;
+    options.frame = 'stay';
     options.vx = Math.random() * 20 - 10;
     //options.vy = Math.random() * 10 - 5;
 
