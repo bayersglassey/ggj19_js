@@ -16,7 +16,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 'use strict';
 
 var delay = 30;
-var USE_BACKGROUND = true;
 var DEBUG_RENDER = false;
 
 var render_priority = ['home_bg', 'home', 'daisy', 'seed', 'flower', 'droplet', 'spider', 'bee'];
@@ -30,6 +29,8 @@ var backgrounds = [
 ];
 var background_i = 0;
 function cycle_background(){
+    /* This function is no longer used... current background image is
+    determined by the level */
     background_i++;
     if(background_i >= backgrounds.length)background_i = 0;
 }
@@ -92,15 +93,7 @@ var spider_sprite = {
 var ground_height = 75;
 var ground_y = canvas.height - ground_height;
 
-var n_seeds = 10;
-var n_daisies = 5;
-var n_flowers_collected = 0;
-function game_won(){
-    return n_seeds === n_flowers_collected;
-}
 
-var n_spiders = 2;
-init();
 
 var KUP = 38;
 var KDOWN = 40;
@@ -112,6 +105,8 @@ var KS = 83;
 var KD = 68;
 var KM = 77;
 var KB = 66;
+var KR = 82;
+var KN = 78;
 var KSPACE = 32;
 var kdown = {};
 var mdown = false;
@@ -153,7 +148,7 @@ function mute(){
 }
 
 
-function draw_message(msg1, msg2){
+function draw_message(title, subtitles){
     var ctx = canvas.getContext('2d');
 
     var x = canvas.width / 2;
@@ -163,14 +158,16 @@ function draw_message(msg1, msg2){
     ctx.textAlign = 'center';
     ctx.fillStyle = 'black';
     ctx.font = "bold " + size + "px Georgia";
-    ctx.fillText(msg1, x, y);
+    ctx.fillText(title, x, y);
 
-    if(msg2){
-        size = 20;
-        y += size;
+    subtitles = subtitles || [];
+    for(var i = 0; i < subtitles.length; i++){
+        var subtitle = subtitles[i];
+        size = 25;
+        y += 30;
 
         ctx.font = "bold " + size + "px Georgia";
-        ctx.fillText(msg2, x, y);
+        ctx.fillText(subtitle, x, y);
     }
 }
 
@@ -247,8 +244,6 @@ function drawImageCenter(ctx, image, x, y, cx, cy, scale, rotation){
 }
 
 
-var n_entities_created = 0;
-var entities = [];
 function Entity(options){
 
     /* Each entitity has a unique created_i value, just so that we can
@@ -974,20 +969,51 @@ update(Home.prototype, {
 
 
 
-/* Create some entities at start of game... */
-var home_bg = new HomeBG();
-var home = new Home();
-home.reset_position();
-var bee = new Bee();
-for(var i = 0; i < n_seeds; i++){
-    new Seed();
+
+var level = 0;
+var n_levels = backgrounds.length;
+
+/* Variables which reset each time you go to the next level */
+var n_seeds;
+var n_daisies;
+var n_flowers_collected;
+var n_spiders;
+var win_timer;
+var n_entities_created, entities;
+var home_bg, home, bee;
+game_start();
+function game_start(){
+    background_i = level;
+    n_seeds = 4 + 2 * level;
+    n_daisies = 5;
+    n_flowers_collected = 0;
+    n_spiders = level + 1;
+    win_timer = 0;
+
+    n_entities_created = 0;
+    entities = [];
+
+    /* Create some entities at start of game... */
+    home_bg = new HomeBG();
+    home = new Home();
+    home.reset_position();
+    bee = new Bee();
+    for(var i = 0; i < n_seeds; i++){
+        new Seed();
+    }
+    for(var i = 0; i < n_daisies; i++){
+        new Daisy();
+    }
+    for(var i = 0; i < n_spiders; i++){
+        new Spider();
+    }
 }
-for(var i = 0; i < n_daisies; i++){
-    new Daisy();
+function game_won(){
+    return n_seeds === n_flowers_collected;
 }
-for(var i = 0; i < n_spiders; i++){
-    new Spider();
-}
+
+
+
 backgroundMusic.play();
 //this loops the music
 document.getElementById("bMsc").addEventListener('ended', function(){
@@ -995,7 +1021,10 @@ document.getElementById("bMsc").addEventListener('ended', function(){
     this.play();
 }, false);
 
+init();
 function init(){
+    /* Set up event listeners & start main loop */
+
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
     //$(canvas).on('click', click);
@@ -1039,14 +1068,9 @@ function step(){
 function render(){
     var ctx = canvas.getContext('2d');
 
-    if(USE_BACKGROUND){
-        var background = backgrounds[background_i];
-        ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-    }else{
-        /* Old school... just clear the screen to white */
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    /* Figure out current background image & draw it */
+    var background = backgrounds[background_i];
+    ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
     /* Sort entities by render priority */
     entities.sort(function(e1, e2){
@@ -1082,10 +1106,22 @@ function render(){
     ctx.fillRect(bar.x, bar.y, bar.w * ratio, bar.h); /* filled rectangle */
 
     /* Render a message */
-    if(game_won())draw_message("Congratulations",
-        "Because your home flower is huge now.");
-    else if(bee.dead)draw_message("Eaten by a spider",
-        "Reload the page to try again!");
+    if(game_won()){
+        if(level < n_levels - 1){
+            draw_message("Congratulations", [
+                "Because your home flower is huge now.",
+                "Press N to go to the next level!",
+            ]);
+        }else{
+            draw_message("Congratulations", [
+                "Because your home flower is huge now.",
+                "That was the whole game! Thanks for playing...",
+            ]);
+        }
+    }else if(bee.dead){
+        draw_message("Eaten by a spider",
+            ["Press R to restart this level!"]);
+    }
 }
 
 function keydown(event){
@@ -1095,7 +1131,16 @@ function keydown(event){
 
 function keyup(event){
     if(event.keyCode === KM) mute();
-    if(event.keyCode === KB) cycle_background();
+    if(event.keyCode === KR) game_start();
+    if(event.keyCode === KN){
+        /* NOTE: shift+N is a cheat code to go to next level! */
+        var won = event.shiftKey || game_won();
+        if(won && level < n_levels - 1){
+            /* Go to next level */
+            level++;
+            game_start();
+        }
+    }
     kdown[event.keyCode] = false;
 }
 
