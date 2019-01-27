@@ -31,6 +31,9 @@ var seed_sprite = {
 var flower_sprite = {
     lily: document.getElementById('flower_lily_sprite'),
 };
+var home_sprite = {
+    home: document.getElementById('home_sprite'),
+};
 
 var ground_height = 85;
 var ground_y = canvas.height - ground_height;
@@ -385,6 +388,8 @@ update(Fly.prototype, {
     },
     step: function(){
 
+        remove_dead_stuff(this.grabbed_things);
+
         if(this.vx){
             //rotates w motion
             this.orientation = get_orientation(this.vx, this.vy);
@@ -416,11 +421,11 @@ update(Fly.prototype, {
         if(this.grab_cooldown > 0){
             this.grab_cooldown--;
         }else{
-            /* Pick up any droplets we touch */
+            /* Pick up any droplets or hatched flowers we touch */
             var collided_entities = this.get_collided_entities();
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
-                if(other.type !== 'droplet')continue;
+                if(other.type !== 'droplet' && other.type !== 'flower')continue;
                 if(this.grabbed_things.indexOf(other) >= 0)continue;
 
                 /* Grab the thing! */
@@ -445,10 +450,8 @@ function Droplet(options){
     options.gravity = .3;
     options.color = 'rgba(0, 0, 255, .8)';
     options.fillcolor = 'rgba(128, 128, 255, .4)';
-    options.trail_color = 'lightgrey';
+    options.trail_color = 'lightblue';
     options.max_n_trails = 5;
-    options.x = Math.random() * canvas.width;
-    options.y = 0;
     Entity.call(this, options);
 
     /* Radius starts at start_radius, grows by add_radius_normal pixels
@@ -543,7 +546,7 @@ function Flower(options){
     /* Javascript class inheritance?? */
     options = options || {};
     options.damp = .99;
-    options.gravity = -.1;
+    options.gravity = -.3;
     options.color = 'purple';
     options.fillcolor = 'lightsalmon';
     options.max_n_trails = 0;
@@ -580,7 +583,72 @@ update(Flower.prototype, {
 
 
 
+/* HomeBG is the big thing which looks like a flower.
+It doesn't do anything except look pretty. */
+function HomeBG(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    options.gravity = 0;
+    options.radius = 150;
+    options.color = 'grey';
+    options.fillcolor = 'white';
+    options.max_n_trails = 0;
+    options.sprite = home_sprite;
+    options.frame = 'home';
+    Entity.call(this, options);
+}
+update(HomeBG.prototype, Entity.prototype);
+update(HomeBG.prototype, {
+    type: 'home_bg',
+});
+
+
+
+/* Home is an invisible thing sitting near the top of the HomeBG
+thing (which has the flower image).
+Home sprays droplets, and you bring hatched flowers back to it. */
+function Home(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    options.gravity = 0;
+    options.radius = 30;
+    options.color = 'transparent';
+    options.fillcolor = 'transparent';
+    options.max_n_trails = 0;
+    Entity.call(this, options);
+}
+update(Home.prototype, Entity.prototype);
+update(Home.prototype, {
+    type: 'home',
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        /* When flowers are delivered to the Home, they disappear
+        and it grows... */
+        var collided_entities = this.get_collided_entities();
+        for(var i = 0; i < collided_entities.length; i++){
+            var other = collided_entities[i];
+            if(other.type !== 'flower')continue;
+
+            other.die(); /* I feel slightly guilty for telling a flower to "die"... */
+            home_bg.radius += 15;
+            this.reset_position();
+        }
+    },
+    reset_position: function(){
+        /* As home_bg grows in size, you can call this function to make
+        sure home stays in the middle of home_bg's flower image */
+        this.x = home_bg.x;
+        this.y = home_bg.y - 60 * home_bg.radius/100;
+    },
+});
+
+
+
 /* Create some entities at start of game... */
+var home_bg = new HomeBG();
+var home = new Home();
+home.reset_position();
 var fly = new Fly();
 for(var i = 0; i < n_seeds; i++){
     new Seed();
@@ -612,20 +680,8 @@ function init(){
     setInterval(step, delay);
 }
 
-function step(){
-    tick++;
-
-    fly.do_key_stuff();
-
-    if(tick % 25 === 0)new Droplet();
-
-    /* Let entities do whatever it is they do each frame */
-    for(var i = 0; i < entities.length; i++){
-        var entity = entities[i];
-        entity.step();
-    }
-
-    /* Remove "dead" entities */
+function remove_dead_stuff(entities){
+    /* Removes "dead" entities from an array */
     for(var i = 0; i < entities.length;){
         var entity = entities[i];
         if(entity.dead){
@@ -635,6 +691,30 @@ function step(){
             i++;
         }
     }
+}
+
+function step(){
+    tick++;
+
+    fly.do_key_stuff();
+
+    if(tick % 25 === 0){
+        new Droplet({
+            x: home.x,
+            y: home.y,
+            vx: Math.random() * 20 - 10,
+            vy: Math.random() * 20 - 20,
+        });
+    }
+
+    /* Let entities do whatever it is they do each frame */
+    for(var i = 0; i < entities.length; i++){
+        var entity = entities[i];
+        entity.step();
+    }
+
+    /* Remove "dead" entities */
+    remove_dead_stuff(entities);
 
     /* Render the world */
     render();
