@@ -25,6 +25,8 @@ var bee_sprite = {
 var ground_height = 50;
 var ground_y = canvas.height - ground_height;
 
+var n_seeds = 10;
+
 init();
 
 var KUP = 38;
@@ -255,16 +257,19 @@ update(Entity.prototype, {
             }
         }
     },
-    distance: function(other){
+    distance_xy: function(x, y){
         /* The classic Pythagoreas! */
         return Math.sqrt(
-            Math.pow(this.x - other.x, 2) +
-            Math.pow(this.y - other.y, 2));
+            Math.pow(this.x - x, 2) +
+            Math.pow(this.y - y, 2));
+    },
+    distance: function(other){
+        return this.distance_xy(other.x, other.y);
     },
     collide: function(other){
         return this.distance(other) < this.radius + other.radius;
     },
-    get_collided_entites: function(){
+    get_collided_entities: function(){
         var collided_entities = [];
         for(var i = 0; i < entities.length; i++){
             var other = entities[i];
@@ -272,6 +277,19 @@ update(Entity.prototype, {
             if(this.collide(other))collided_entities.push(other);
         }
         return collided_entities;
+    },
+    spring_xy: function(x, y, springiness){
+        /* Changes our velocity so it's like we're connected to
+        (x, y) by a spring... */
+        var distance = this.distance_xy(x,y);
+        var mul = distance * springiness;
+        var addx = (x - this.x) * mul;
+        var addy = (y - this.y) * mul;
+        this.vx += addx;
+        this.vy += addy;
+    },
+    spring: function(other, springiness){
+        this.spring_xy(other.x, other.y, springiness);
     },
 });
 
@@ -283,6 +301,8 @@ function Fly(options){
     options.sprite = bee_sprite;
     options.sprite_w = 50;
     options.sprite_h = 50;
+    options.color = 'orange';
+    options.fillcolor = 'yellow';
     Entity.call(this, options);
 
     this.min_stamina = 15; /* Go below this, and you can no longer fly!.. */
@@ -342,7 +362,7 @@ update(Fly.prototype, {
             this.grab_cooldown--;
         }else{
             /* Pick up any droplets we touch */
-            var collided_entities = this.get_collided_entites();
+            var collided_entities = this.get_collided_entities();
             for(var i = 0; i < collided_entities.length; i++){
                 var other = collided_entities[i];
                 if(other.type !== 'droplet')continue;
@@ -354,12 +374,7 @@ update(Fly.prototype, {
         /* Swing stuff around which we've picked up */
         for(var i = 0; i < this.grabbed_things.length; i++){
             var other = this.grabbed_things[i];
-            var distance = this.distance(other);
-            var mul = distance * this.grab_springiness;
-            var addx = (this.x - other.x) * mul;
-            var addy = (this.y - other.y) * mul;
-            other.vx += addx;
-            other.vy += addy;
+            other.spring(this, this.grab_springiness);
         }
     },
 });
@@ -422,17 +437,105 @@ update(Droplet.prototype, {
 
 
 
+function Seed(options){
+    /* Javascript class inheritance?? */
+    options = options || {};
+    options.radius = 5;
+    options.max_radius = 25;
+    options.damp = .99;
+    options.gravity = .1;
+    options.color = 'green';
+    options.fillcolor = 'lightgreen';
+    options.max_n_trails = 0;
+    options.x = Math.random() * canvas.width;
+    options.y = 0;
+    /* random velocity (vx, vy) so seeds are "scattered" from the sky
+    on page load */
+    options.vx = Math.random() * 20 - 10;
+    options.vy = Math.random() * 10 - 5;
+
+    Entity.call(this, options);
+}
+update(Seed.prototype, Entity.prototype);
+update(Seed.prototype, {
+    type: 'seed',
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        /* If any droplets are touching the seed, it "sucks up" water
+        from the droplet, and grows. */
+        var collided_entities = this.get_collided_entities();
+        for(var i = 0; i < collided_entities.length; i++){
+            var other = collided_entities[i];
+            if(other.type !== 'droplet')continue;
+
+            /* Drain water from the droplet and add to seed's size */
+            this.radius += 1;
+            other.radius -= 2;
+            if(other.radius < 5){
+                /* If the droplet gets small enough, remove it from game */
+                other.die();
+            }
+        }
+
+        /* If seed sucks up enough water, it's removed & replaced with
+        a flower */
+        if(this.radius > this.max_radius){
+            this.die();
+
+            /* Fling flower upwards from ground */
+            var new_vy = this.vy - 15;
+
+            new Flower({x:this.x, y:this.y, vy:new_vy});
+        }
+    },
+});
+
+
 function Flower(options){
     /* Javascript class inheritance?? */
     options = options || {};
+    options.damp = .99;
+    options.gravity = -.1;
+    options.color = 'purple';
+    options.fillcolor = 'lightsalmon';
+    options.max_n_trails = 0;
     Entity.call(this, options);
+
+    /* The flower has a "base" from which it floats upwards...
+    It's connected to the base with springy physics */
+    this.base_x = this.x;
+    this.base_y = this.y;
+    this.base_springiness = .0001;
+
+    /* When flowers are created, they "pop" into existence */
+    this.radius = 5;
+    this.max_radius = 35;
+    this.add_radius = 4;
 }
 update(Flower.prototype, Entity.prototype);
 update(Flower.prototype, {
     type: 'flower',
+    step: function(){
+        Entity.prototype.step.call(this);
+
+        /* Flowers "pop" into existence */
+        this.radius += this.add_radius;
+        if(this.radius > this.max_radius)this.radius = this.max_radius;
+
+        /* Flowers float upwards (gravity < 0) but are tethered to
+        a "base" position with springy physics */
+        this.spring_xy(this.base_x, this.base_y, this.base_springiness);
+    },
 });
 
+
+
+/* Create some entities at start of game... */
 var fly = new Fly();
+for(var i = 0; i < n_seeds; i++){
+    new Seed();
+}
 
 function init(){
     $(document).on('keydown', keydown);
@@ -489,9 +592,7 @@ function render(){
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     /* Render entities */
-    /* NOTE: We render them last to first, so you can see the fly on
-    top of the droplets */
-    for(var i = entities.length - 1; i >= 0; i--){
+    for(var i = 0; i < entities.length; i++){
         var entity = entities[i];
         entity.render();
     }
