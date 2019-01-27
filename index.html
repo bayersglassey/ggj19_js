@@ -33,43 +33,63 @@
         font-weight: bold;
         color: red;
     }
-</style>
+  </style>
 </head>
+<style>
+    body{
+        background-color: #020204;
+        color: #fff8f6;
+    }
+</style>
 <body>
 
+<h2 style="text-align: center; margin-bottom: 0;">It's a bug</h2>
+  
 <article >
     <div class="mw9 mw9-ns center pt4 flex">
+
+        <div style ="height:400px;width:250px;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif; overflow:auto";>
+            <h3 class="left flex">Controls:</h3>
+            <p>     
+                <b>Arrow keys</b> or <b>WASD</b> to move. Touch things to pick them up, <b>Spacebar</b> to drop them.
+                <br>
+                <b>M</b> to mute/unmute background music. <b>B</b> to cycle between background images.
+                <br>
+                You are this bee: <img src="/img/bee.png" width=30 height=30>
+                <br>
+                You can fly, pick things up, and throw them.
+                Flying uses <span class="stamina">stamina</span>, but you can rest on the ground.
+                <br>
+                Deliver the <span class="rain-drop">rain drops</span> to the <span class="seed">Seeds</span>!
+                <br>
+                Once a <span class="seed">seed</span> grows big enough, it blooms into a <span class="flower">flower</span>.
+                <br>
+                Bring the <span class="flower">flowers</span> back to your <span class="home-flower">home flower</span> to make it grow.
+                <br>
+                Avoid the <span class="spider">spiders</span>!
+                If you don't you will have to reload the page, just like in real life.
+            </p>
+        </div>
         <canvas class="center" id="canvas" width="800" height="400">Loading...</canvas>
+        <div style ="height:400px;width:250px;border:1px solid #ccc;font:16px/26px Georgia, Garamond, Serif; overflow:auto";>
+            <h3 class="left flex">Credits:</h3>
+            <p>
+                Ben
+                <br>
+                Tom
+                <br>
+                Prestin
+                <br>
+                Hitomi
+                <br>
+                Riley
+            </p>
+        </div>
     </div>
 </article>
-
-
-
-<h2 style="text-align: center; margin-bottom: 0;">It's a bug</h2>
-<div class="mw9 mw9-ns center pt4 flex" style="padding-top: 0;">
-    <div class="center">
-    <p>
-        <b>M</b> to mute/unmute background music. <b>B</b> to cycle between background images.
-        <br>
-        <b>Arrow keys</b> or <b>WASD</b> to move. Touch things to pick them up, <b>Spacebar</b> to drop them.
-        <br>
-        You are this bee: <img src="/img/bee.png" width=30 height=30>
-        <br>
-        You can fly, pick things up, and throw them.
-        Flying uses <span class="stamina">stamina</span>, but you can rest on the ground.
-        <br>
-        Deliver the <span class="rain-drop">rain drops</span> to the <span class="seed">Seeds</span>!
-        <br>
-        Once a <span class="seed">seed</span> grows big enough, it blooms into a <span class="flower">flower</span>.
-        <br>
-        Bring the <span class="flower">flowers</span> back to your <span class="home-flower">home flower</span> to make it grow.
-        <br>
-        Don't get eaten by <span class="spider">spiders</span>!..
-        if you do, you'll have to reload the page, just like in real life.
-    </p>
-    <button onClick="location.reload()">Reload Page</button>
-    </div>
-</div>
+<button style ="font:20px/26px Georgia, Garamond, Serif;
+"class="mw9 mw9-ns center pt4 flex" value="Refresh Page" onClick="window.location.reload()">
+  Reload</button>
 
 <!-- Load sprite elements before the script, since it tries to
 find the sprites as soon as it loads -->
