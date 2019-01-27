@@ -16,13 +16,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 'use strict';
 
 var delay = 30;
+var USE_BACKGROUND = true;
+
+var background = document.getElementById('background');
 var canvas = document.getElementById('canvas');
 var bee_sprite = {
     crawl: document.getElementById('bee_left_sprite'),
     fly: document.getElementById('bee_sprite'),
 }
 
-var ground_height = 50;
+var ground_height = 85;
 var ground_y = canvas.height - ground_height;
 
 var n_seeds = 10;
@@ -63,9 +66,9 @@ function get_orientation(x, y){
 
         So Math.atan(x) is between -90 degrees to +90 degrees
     */
-    var rot = y === 0? 0: Math.atan(-y/x);
-    if(x < 0)rot += Math.PI;
-    return rot;
+    var orientation = y === 0? 0: Math.atan(-y/x);
+    if(x < 0)orientation += Math.PI;
+    return orientation;
 }
 
 function to_degrees(radians){
@@ -80,13 +83,21 @@ function interpolate(x0, x1, t){
     return x0 + x1 * t;
 }
 
-function interpolate_rgb(r0, g0, b0, r1, g1, b1, t){
+function interpolate_rgb(r0, g0, b0, a0, r1, g1, b1, a1, t){
     var r = parseInt(interpolate(r0, r1, t));
     var g = parseInt(interpolate(g0, g1, t));
     var b = parseInt(interpolate(b0, b1, t));
+    var a = parseInt(interpolate(a0, a1, t));
 
     /* Make a CSS rgb color value */
-    return ['rgb(', r, ', ', g, ', ', b, ')'].join('');
+    return ['rgba(', r, ', ', g, ', ', b, ')'].join('');
+}
+
+function interpolate_rgb(r0, g0, b0, r1, g1, b1, t){
+    return interpolate_rgba(
+        r0, g0, b0, 255,
+        r1, g1, b1, 255,
+        t);
 }
 
 
@@ -240,7 +251,7 @@ update(Entity.prototype, {
             var w = this.sprite_w? this.sprite_w: this.radius * 2;
             var h = this.sprite_h? this.sprite_h: this.radius * 2;
 
-            var OLDSCHOOL = false;
+            var OLDSCHOOL = true;
             if(OLDSCHOOL){
                 /* How we used to do it before copy-pasting magic stuff
                 off StackOverflow */
@@ -385,8 +396,8 @@ function Droplet(options){
     options = options || {};
     options.damp = .985;
     options.gravity = .3;
-    options.color = 'blue';
-    options.fillcolor = 'lightblue';
+    options.color = 'rgba(0, 0, 255, .8)';
+    options.fillcolor = 'rgba(128, 128, 255, .4)';
     options.trail_color = 'lightgrey';
     options.max_n_trails = 5;
     options.x = Math.random() * canvas.width;
@@ -409,19 +420,6 @@ update(Droplet.prototype, {
     type: 'droplet',
     step: function(){
         Entity.prototype.step.call(this);
-
-        var FADE_TO_WHITE = false;
-        if(FADE_TO_WHITE){
-            /* Droplots start off blue, fade to white...
-            There's probably a way to do this via transparency instead of
-            fading to white, though... idunno */
-            var t = Math.min(this.age / this.max_age, 1);
-            this.color = interpolate_rgb(
-                0, 0, 255, /* blue */
-                255, 255, 255, /* white */
-                t);
-        }
-
         if(this.radius >= this.pop_after_radius){
             /* Old droplets "pop" by quickly expanding, then disappearing */
             this.radius += this.add_radius_popping;
@@ -587,9 +585,13 @@ function step(){
 function render(){
     var ctx = canvas.getContext('2d');
 
-    /* Clear screen */
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if(USE_BACKGROUND){
+        ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+    }else{
+        /* Old school... just clear the screen to white */
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     /* Render entities */
     for(var i = 0; i < entities.length; i++){
