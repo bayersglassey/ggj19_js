@@ -89,6 +89,21 @@ var spider_sprite = {
         n_frames_y: 4,
         image: document.getElementById('spider_stay_sprite'),
     },
+    walk: {
+        animated: true,
+        loop: true,
+        n_frames_x: 6,
+        n_frames_y: 1,
+        image: document.getElementById('spider_walk_sprite'),
+    },
+    jump: {
+        animated: true,
+        loop: false,
+        n_frames_x: 13,
+        n_frames_y: 1,
+        n_frames: 8,
+        image: document.getElementById('spider_jump_sprite'),
+    },
 };
 
 var ground_height = 75;
@@ -351,7 +366,7 @@ update(Entity.prototype, {
         }
 
         /* You're considered on the ground if you're within 10 pixels of it */
-        this.on_ground = this.y >= map_b - 10;
+        this.on_ground = this.vy >= 0 && this.y >= map_b - 10;
 
         this.vx *= this.damp;
         this.vy *= this.damp;
@@ -402,7 +417,7 @@ update(Entity.prototype, {
 
         var n_frames_x = spriteframe.n_frames_x;
         var n_frames_y = spriteframe.n_frames_y;
-        var n_frames = n_frames_x * n_frames_y;
+        var n_frames = this.get_n_frames();
 
         var frame_w = image.width / n_frames_x;
         var frame_h = image.height / n_frames_y;
@@ -486,7 +501,13 @@ update(Entity.prototype, {
         /* Nothing happens by default when player picks something up,
         but "subclasses" of Entity can override this function to do
         something special */
-    }
+    },
+    get_n_frames: function(){
+        /* Returns number of frames in current animation frame */
+        var spriteframe = this.sprite[this.frame];
+        if(spriteframe.n_frames)return spriteframe.n_frames;
+        return spriteframe.n_frames_x * spriteframe.n_frames_y;
+    },
 });
 
 function Bee(options){
@@ -811,11 +832,6 @@ function Daisy(options){
 update(Daisy.prototype, Entity.prototype);
 update(Daisy.prototype, {
     type: 'daisy',
-    get_n_frames: function(){
-        /* Returns number of frames in current animation frame */
-        var spriteframe = this.sprite[this.frame];
-        return spriteframe.n_frames_x * spriteframe.n_frames_y;
-    },
     step: function(){
         Entity.prototype.step.call(this);
 
@@ -842,6 +858,7 @@ function Spider(options){
     options.max_radius = 60;
     options.damp = .99;
     options.gravity = .1;
+    options.bounce_on_ground = false;
     options.color = 'red';
     options.fillcolor = 'black';
     options.max_n_trails = 0;
@@ -875,24 +892,45 @@ update(Spider.prototype, {
 
         //this is rate at which a spider action occurs
         var randMover = Math.round(Math.random()*240);
-        if(randMover == 1){
-            this.vy-=this.accel;
-        }
-        if(randMover == 2){
-            this.vx+=this.accel;
-        }
-        if(randMover == 3){
-            this.vx-=this.accel;
-        }
-        if(randMover == 4){
+
+        if(randMover == 5){
+            /* Spider slowly grows bigger & faster... */
             this.radius += 0.5;
             this.accel += 0.1;
         }
-        if(randMover >= 5 && randMover <= 6 && this.frame === 'stay'){
-            /* Replay the animation, spider rears back on its legs */
-            this.frame_i = 0;
-        }
 
+        if(this.on_ground){
+            if(randMover == 3){
+                // right
+                this.vx+=this.accel;
+            }else if(randMover == 4){
+                // left
+                this.vx-=this.accel;
+            }else if(randMover == 1 || randMover == 2){
+                // jump
+                this.vy -= Math.random() * 3 + 4;
+                this.frame = 'jump';
+                this.frame_i = 0;
+            }else{
+                var moving = Math.abs(this.vx) >= 1;
+                if(moving){
+                    // walk animation
+                    if(this.frame !== 'walk'){
+                        this.frame = 'walk';
+                        this.frame_i = 0;
+                    }
+                }else{
+                    // stay animation
+                    if(this.frame !== 'stay'){
+                        this.frame = 'stay';
+                        this.frame_i = 0;
+                    }else if(randMover >= 7 && randMover <= 8){
+                        /* Replay the animation, spider rears back on its legs */
+                        this.frame_i = 0;
+                    }
+                }
+            }
+        }
     },
 });
 
