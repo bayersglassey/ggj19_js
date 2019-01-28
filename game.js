@@ -812,6 +812,7 @@ update(Flower.prototype, {
     die: function(){
         Entity.prototype.die.call(this);
         n_flowers_collected++;
+        if(game_won())victorySound.play();
     },
 });
 
@@ -1106,7 +1107,7 @@ function step(){
     /* Render the world */
     render();
 }
-var victSndPlayed = true;
+
 function render(){
     var ctx = canvas.getContext('2d');
 
@@ -1149,10 +1150,6 @@ function render(){
 
     /* Render a message */
     if(game_won()){
-        if(victSndPlayed){
-            victorySound.play();
-            victSndPlayed = false;
-        }
         if(level < n_levels - 1){
             draw_message("Congratulations", [
                 "Because your home flower is huge now.",
