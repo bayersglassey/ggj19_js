@@ -12,7 +12,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 
 */
-
 'use strict';
 
 var delay = 30;
@@ -94,8 +93,6 @@ var spider_sprite = {
 var ground_height = 75;
 var ground_y = canvas.height - ground_height;
 
-
-
 var KUP = 38;
 var KDOWN = 40;
 var KLEFT = 37;
@@ -116,7 +113,11 @@ var mousey;
 
 var backgroundMusic = new sound("/music/ClapClapSlap.wav" , "bMsc", .5);
 var collideSound = new sound("/sounds/BoopEffect.wav", "collideSnd");
-var throwSound = collideSound;
+var throwSound = new sound("/sounds/Drop.wav", "dropSnd");
+var homeGrowSound = new sound("/sounds/HomeEnlarge.wav", "hGrowSnd");
+var bloomSound = new sound("/sounds/Bloom.wav", "bloomSnd");
+var hurtSound = new sound("/sounds/Hurt.wav", "hurtSnd");
+var victorySound = new sound("/sounds/Victory.wav", "victorySnd");
 
 function sound(src , ident, volume){
     volume = volume || 1;
@@ -147,7 +148,6 @@ function mute(){
         //bMsc.play();
     }
 }
-
 
 function draw_message(title, subtitles){
     var ctx = canvas.getContext('2d');
@@ -721,6 +721,7 @@ update(Seed.prototype, {
 
             /* If seed sucks up enough water, it hatches a flower */
             if(this.radius > this.max_radius){
+                bloomSound.play();
                 this.frame = 'hatched';
                 this.gravity = .2;
                 this.radius *= .8;
@@ -869,6 +870,7 @@ update(Spider.prototype, {
             //if spider eats bee then he gets bigger
             this.radius += 10;
 
+            hurtSound.play();
             other.die();
             //may want to reload or generate button to restart
         }
@@ -957,6 +959,7 @@ update(Home.prototype, {
 
             other.die(); /* I feel slightly guilty for telling a flower to "die"... */
             home_bg.radius += 15;
+            homeGrowSound.play();
             this.reset_position();
         }
     },
@@ -1065,7 +1068,7 @@ function step(){
     /* Render the world */
     render();
 }
-
+var victSndPlayed = true;
 function render(){
     var ctx = canvas.getContext('2d');
 
@@ -1108,6 +1111,10 @@ function render(){
 
     /* Render a message */
     if(game_won()){
+        if(victSndPlayed){
+            victorySound.play();
+            victSndPlayed = false;
+        }
         if(level < n_levels - 1){
             draw_message("Congratulations", [
                 "Because your home flower is huge now.",
