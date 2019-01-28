@@ -1038,7 +1038,6 @@ var n_spiders;
 var win_timer;
 var n_entities_created, entities;
 var home_bg, home, bee;
-game_start();
 function game_start(){
     background_i = level;
     n_seeds = 4 + 2 * level;
@@ -1082,15 +1081,20 @@ init();
 function init(){
     /* Set up event listeners & start main loop */
 
+    $(document).ready(function(){
+        /* Set up first level */
+        game_start();
+
+        /* Start the main game loop */
+        setInterval(step, delay);
+    });
+
     $(document).on('keydown', keydown);
     $(document).on('keyup', keyup);
     //$(canvas).on('click', click);
     $(canvas).on('mousedown',mousedown);
     $(canvas).on('mouseup',mouseup);
     $(canvas).on('mousemove',mousemove);
-
-    /* Start the main game loop */
-    setInterval(step, delay);
 }
 
 function remove_dead_stuff(entities){
