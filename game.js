@@ -865,7 +865,7 @@ function Spider(options){
     options.x = Math.random() * canvas.width;
     options.y = ground_y;
     options.sprite = spider_sprite;
-    options.sprite_radius_multiplier = 1.3;
+    options.sprite_radius_multiplier = 2;
     options.frame = 'stay';
     options.vx = Math.random() * 20 - 10;
     //options.vy = Math.random() * 10 - 5;
