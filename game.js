@@ -36,8 +36,17 @@ function cycle_background(){
 }
 
 var bee_sprite = {
-    crawl: {image: document.getElementById('bee_left_sprite')},
-    fly: {image: document.getElementById('bee_sprite')},
+    crawl: {
+        image: document.getElementById('bee_left_sprite'),
+    },
+    fly: {
+        animated: true,
+        loop: true,
+        n_frames_x: 7,
+        n_frames_y: 1,
+        image: document.getElementById('bee_fly_sprite'),
+        radius_multiplier: 1.5,
+    },
 };
 var seed_sprite = {
     unhatched: {image: document.getElementById('seed_sprite')},
@@ -428,8 +437,13 @@ update(Entity.prototype, {
         var frame_x = frame_i % n_frames_x;
         var frame_y = Math.floor(frame_i / n_frames_x);
 
-        var w = (this.radius * this.sprite_radius_multiplier) * 2;
-        var h = (this.radius * this.sprite_radius_multiplier) * 2;
+        var radius_multiplier = this.sprite_radius_multiplier;
+        if(spriteframe.radius_multiplier){
+            radius_multiplier *= spriteframe.radius_multiplier;
+        }
+
+        var w = (this.radius * radius_multiplier) * 2;
+        var h = (this.radius * radius_multiplier) * 2;
         var dx = this.x - w / 2;
         var dy = this.y - h / 2;
 
